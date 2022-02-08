@@ -13,14 +13,7 @@
 std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std::vector<char const *> classNames) {
   std::vector<TargetBox> boxes;
 
-  auto start = ncnn::get_current_time();
   api.detection(cvImg, boxes);
-  auto end = ncnn::get_current_time();
-  auto time = end - start;
-  spdlog::info("detection time: {} ms", time);
-
-//  cv::putText(cvImg, std::to_string(time) + " ms", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1,
-//              cv::Scalar(0, 0, 255), 2);
 
   for (TargetBox box: boxes) {
     char text[256];
@@ -159,12 +152,18 @@ int main(int argc, char **argv) {
       int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
       int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
       int frame_fps = cap.get(cv::CAP_PROP_FPS);
+      int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
+      int real_frame_count = 0;
 
       int codecCV = getCodec(codec);
       spdlog::debug("Output video codec: {}", codecCV);
       cv::VideoWriter outputVideo(outputFileName, codecCV, frame_fps,
                                   cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
+
+      spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
       spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
+      spdlog::debug("Output video fps: {}", frame_fps);
+      spdlog::debug("Output video frame count: {}", frame_count);
       while (true) {
         cv::Mat cvImg;
         cv::Mat cvImgResized;
@@ -172,10 +171,18 @@ int main(int argc, char **argv) {
         if (cvImg.empty()) {
           break;
         }
+        auto start = ncnn::get_current_time();
         cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
         auto boxes = detectFrame(cvImgResized, api, classNames);
-        // cv::imwrite(outputFileName, cvImg);
         outputVideo.write(cvImgResized);
+        auto end = ncnn::get_current_time();
+
+        real_frame_count++;
+        if(frame_count > 0) {
+          spdlog::info("[{}/{}]\t{}ms", real_frame_count, frame_count, end - start);
+        } else {
+          spdlog::info("[{}]\t{}ms", real_frame_count, end - start);
+        }
       }
       break;
     }
