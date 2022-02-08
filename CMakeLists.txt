@@ -3,9 +3,29 @@
 
 cmake_minimum_required(VERSION 3.14)
 project( Yolo-Fastestv2 )
+set(CMAKE_CXX_STANDARD 17)
+
+
+# opencv
 find_package( OpenCV REQUIRED )
 
-set(CMAKE_CXX_STANDARD 17)
+# target spdlog
+# you can just comment this line if you want to system library
+add_subdirectory(lib/spdlog)
+
+# https://github.com/gabime/spdlog
+# https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt
+# cd lib/spdlog && mkdir build && cd build
+# cmake .. && make -j
+# make install
+# or install it with package manager
+# sudo apt install libspdlog-dev
+if(NOT TARGET spdlog)
+    # Stand-alone build
+    find_package(spdlog REQUIRED)
+endif()
+
+
 
 # use CLI11 from https://github.com/CLIUtils/CLI11
 if(NOT DEFINED CLI11_DIR)
@@ -37,4 +57,5 @@ include_directories( ${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_
 
 add_executable(Yolo-Fastestv2 ${MAIN_SRC} ${YOLO_FASTEST_SRC})
 target_link_libraries(Yolo-Fastestv2 ${NCNN_LIBS})
+target_link_libraries(Yolo-Fastestv2 spdlog::spdlog)
 target_link_libraries(Yolo-Fastestv2 ${OpenCV_LIBS})

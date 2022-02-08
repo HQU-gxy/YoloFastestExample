@@ -43,7 +43,7 @@ std::vector<TargetBox> detectFrame(cv::Mat& cvImg, yoloFastestv2& api, const std
 }
 
 int main(int argc, char **argv) {
-  static std::vector<char const *> class_names = {
+  static const std::vector<char const *> class_names = {
       "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
       "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
       "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
