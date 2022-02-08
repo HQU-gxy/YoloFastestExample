@@ -29,9 +29,9 @@ private:
   ncnn::Net net;
   std::vector<float> anchor;
 
-  char *inputName;
-  char *outputName1;
-  char *outputName2;
+  const char *inputName;
+  const char *outputName1;
+  const char *outputName2;
 
   int numAnchor;
   int numOutput;

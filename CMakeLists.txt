@@ -5,12 +5,13 @@ cmake_minimum_required(VERSION 3.14)
 project( Yolo-Fastestv2 )
 set(CMAKE_CXX_STANDARD 17)
 
-# opencv
 find_package( OpenCV REQUIRED )
 
 # target spdlog
 # you can just comment this line if you want to system library
-add_subdirectory(lib/spdlog)
+if (WITH_SPDLOG)
+    add_subdirectory(lib/spdlog)
+endif ()
 
 # https://github.com/gabime/spdlog
 # https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt
@@ -23,8 +24,6 @@ if(NOT TARGET spdlog)
     # Stand-alone build
     find_package(spdlog REQUIRED)
 endif()
-
-
 
 # use CLI11 from https://github.com/CLIUtils/CLI11
 if(NOT DEFINED CLI11_DIR)
@@ -40,6 +39,10 @@ if(OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
+
+# Cross Compile
+# cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake \
+# -DNCNN_INSTALL_DIR=~/ncnn/build-aarch64-linux-gnu/install ..
 
 # NCNN
 # I have copied the libs from /ncnn/build/install to /usr/local

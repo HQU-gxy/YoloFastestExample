@@ -18,6 +18,7 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std
   auto end = ncnn::get_current_time();
   auto time = end - start;
   spdlog::info("detection time: {} ms", time);
+
 //  cv::putText(cvImg, std::to_string(time) + " ms", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1,
 //              cv::Scalar(0, 0, 255), 2);
 
@@ -68,6 +69,21 @@ FileType getFileType(const std::string fileName) {
   }
 }
 
+int getCodec(const std::string codec){
+  if (codec == "mjpeg"){
+    return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+  } else if (codec == "h264"){
+    return cv::VideoWriter::fourcc('X', '2', '6', '4');
+  } else if (codec == "mp4v"){
+    return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+  } else if (codec == "mkvh"){
+    return cv::VideoWriter::fourcc('m', 'k', 'v', 'h');
+  } else {
+    spdlog::warn("Unknown codec: {}, using mp4v", codec);
+    return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+  }
+}
+
 std::string getOutputFileName(const std::string inputFileName) {
   std::filesystem::path inputPath(inputFileName);
   return inputPath.stem().string() + "-out" + inputPath.extension().string();
@@ -92,12 +108,14 @@ int main(int argc, char **argv) {
   std::string outputFileName = "";
   std::string paramPath = "";
   std::string binPath = "";
+  std::string codec = "mp4v";
   float scaledCoeffs = 1.0;
   bool isDebug = false;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required()->check(
       CLI::ExistingFile);
   app.add_option("-o,--output", outputFileName, "Output file location");
-  app.add_option("-s,--scale", scaledCoeffs, "Output file location")->check(CLI::Range(0.0, 1.0));
+  app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
+  app.add_option("-c,--codec", codec, "Codec for video output");
   app.add_option("-p,--param", paramPath, "ncnn network prototype file (end with .param)")->required()->check(
       CLI::ExistingFile);
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(CLI::ExistingFile);
@@ -142,17 +160,22 @@ int main(int argc, char **argv) {
       int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
       int frame_fps = cap.get(cv::CAP_PROP_FPS);
 
-      cv::VideoWriter outputVideo(outputFileName, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), frame_fps,
-                                  cv::Size(frame_width, frame_height));
+      int codecCV = getCodec(codec);
+      spdlog::debug("Output video codec: {}", codecCV);
+      cv::VideoWriter outputVideo(outputFileName, codecCV, frame_fps,
+                                  cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
+      spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
       while (true) {
         cv::Mat cvImg;
+        cv::Mat cvImgResized;
         cap >> cvImg;
         if (cvImg.empty()) {
           break;
         }
-        auto boxes = detectFrame(cvImg, api, classNames);
+        cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
+        auto boxes = detectFrame(cvImgResized, api, classNames);
         // cv::imwrite(outputFileName, cvImg);
-        outputVideo.write(cvImg);
+        outputVideo.write(cvImgResized);
       }
       break;
     }
