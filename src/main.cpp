@@ -10,7 +10,7 @@
 
 // not a pure function, will modify the cvImg
 // @param classNames - the name of the class to be detected (array of strings)
-std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std::vector<char const *> classNames) {
+std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std::vector<char const *> &classNames) {
   std::vector<TargetBox> boxes;
 
   api.detection(cvImg, boxes);
@@ -47,7 +47,7 @@ enum FileType {
   Unknown
 };
 
-FileType getFileType(const std::string fileName) {
+FileType getFileType(const std::string &fileName) {
   std::filesystem::path inputPath(fileName);
   auto inputExtension = inputPath.extension().string();
   spdlog::debug("Input file extension: {}", inputExtension);
@@ -62,11 +62,13 @@ FileType getFileType(const std::string fileName) {
   }
 }
 
-int getCodec(const std::string codec) {
+int getCodec(const std::string &codec) {
   if (codec == "mjpeg") {
     return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-  } else if (codec == "h264") {
+  } else if (codec == "x264") {
     return cv::VideoWriter::fourcc('X', '2', '6', '4');
+  } else if (codec == "h264") {
+    return cv::VideoWriter::fourcc('H', '2', '6', '4');
   } else if (codec == "mp4v") {
     return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
   } else if (codec == "mkvh") {
@@ -77,9 +79,9 @@ int getCodec(const std::string codec) {
   }
 }
 
-std::string getOutputFileName(const std::string inputFileName) {
+std::string getOutputFileName(const std::string &inputFileName, const std::string postFix = "-out") {
   std::filesystem::path inputPath(inputFileName);
-  return inputPath.stem().string() + "-out" + inputPath.extension().string();
+  return inputPath.stem().string() + postFix + inputPath.extension().string();
 }
 
 int main(int argc, char **argv) {
@@ -97,10 +99,10 @@ int main(int argc, char **argv) {
 
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
   CLI::App app{"A example YOLO Fastest v2 application"};
-  std::string inputFilePath = "";
-  std::string outputFileName = "";
-  std::string paramPath = "";
-  std::string binPath = "";
+  std::string inputFilePath;
+  std::string outputFileName;
+  std::string paramPath;
+  std::string binPath;
   std::string codec = "mp4v";
   float scaledCoeffs = 1.0;
   bool isDebug = false;
@@ -114,7 +116,7 @@ int main(int argc, char **argv) {
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(CLI::ExistingFile);
   app.add_flag("-d,--debug", isDebug, "Enable debug log");
 
-  CLI11_PARSE(app, argc, argv);
+  CLI11_PARSE(app, argc, argv)
   if (isDebug) {
     spdlog::set_level(spdlog::level::debug);
   }

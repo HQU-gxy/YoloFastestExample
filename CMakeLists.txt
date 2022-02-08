@@ -2,10 +2,10 @@
 # https://blog.csdn.net/TwT520Ly/article/details/80457497
 
 cmake_minimum_required(VERSION 3.14)
-project( Yolo-Fastestv2 )
+project(Yolo-Fastestv2)
 set(CMAKE_CXX_STANDARD 17)
 
-find_package( OpenCV REQUIRED )
+find_package(OpenCV REQUIRED)
 
 # target spdlog
 # you can just comment this line if you want to system library
@@ -20,29 +20,25 @@ endif ()
 # make install
 # or install it with package manager
 # sudo apt install libspdlog-dev
-if(NOT TARGET spdlog)
+if (NOT TARGET spdlog)
     # Stand-alone build
     find_package(spdlog REQUIRED)
-endif()
+endif ()
 
 # use CLI11 from https://github.com/CLIUtils/CLI11
-if(NOT DEFINED CLI11_DIR)
-    set (CLI11_DIR "lib/CLI11" CACHE STRING "CLI11 git repository")
-endif()
+if (NOT DEFINED CLI11_DIR)
+    set(CLI11_DIR "lib/CLI11" CACHE STRING "CLI11 git repository")
+endif ()
 include_directories(${CLI11_DIR}/include)
 
 # OpenMP
 find_package(OpenMP REQUIRED)
-if(OPENMP_FOUND)
+if (OPENMP_FOUND)
     message("OPENMP FOUND")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
-
-# Cross Compile
-# cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake \
-# -DNCNN_INSTALL_DIR=~/ncnn/build-aarch64-linux-gnu/install ..
+endif ()
 
 # NCNN
 # I have copied the libs from /ncnn/build/install to /usr/local
@@ -52,9 +48,9 @@ endif()
 # /usr/local/bin is for normal user programs not managed by the distribution package manager,
 # e.g. locally compiled packages.
 # You should not install them into /usr/bin because future distribution upgrades may modify or delete them without warning.
-if(NOT DEFINED NCNN_INSTALL_DIR)
-    set (NCNN_INSTALL_DIR "/usr/local" CACHE STRING "NCNN install directory")
-endif()
+if (NOT DEFINED NCNN_INSTALL_DIR)
+    set(NCNN_INSTALL_DIR "/usr/local" CACHE STRING "NCNN install directory")
+endif ()
 set(NCNN_LIBS ${NCNN_INSTALL_DIR}/lib/libncnn.a)
 set(NCNN_INCLUDE_DIRS ${NCNN_INSTALL_DIR}/include/ncnn)
 
@@ -63,7 +59,7 @@ set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_SRC src/main.cpp)
 
-include_directories( ${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} )
+include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS})
 
 add_executable(Yolo-Fastestv2 ${MAIN_SRC} ${YOLO_FASTEST_SRC})
 target_link_libraries(Yolo-Fastestv2 ${NCNN_LIBS})
