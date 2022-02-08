@@ -1,4 +1,5 @@
 #include <benchmark.h>
+#include <filesystem>
 #include "yolo-fastestv2.h"
 #include "CLI/App.hpp"
 // These include are required
@@ -46,6 +47,32 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std
   return boxes;
 }
 
+enum FileType {
+  Image,
+  Video,
+  Unknown
+};
+
+FileType getFileType(const std::string fileName) {
+  std::filesystem::path inputPath(fileName);
+  auto inputExtension = inputPath.extension().string();
+  spdlog::debug("Input file extension: {}", inputExtension);
+  // TODO: consider to use pattern matching
+  if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
+    return FileType::Image;
+  } else if (inputExtension == ".mp4" || inputExtension == ".avi" || inputExtension == ".mov" ||
+             inputExtension == ".mkv") {
+    return FileType::Video;
+  } else {
+    return FileType::Unknown;
+  }
+}
+
+std::string getOutputFileName(const std::string inputFileName) {
+  std::filesystem::path inputPath(inputFileName);
+  return inputPath.stem().string() + "-out" + inputPath.extension().string();
+}
+
 int main(int argc, char **argv) {
   static const std::vector<char const *> classNames = {
       "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -59,16 +86,17 @@ int main(int argc, char **argv) {
       "hair drier", "toothbrush"
   };
 
+
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
   CLI::App app{"A example YOLO Fastest v2 application"};
-  std::string inputFileName = "";
-  std::string outputFilename = "output.png";
+  std::string inputFilePath = "";
+  std::string outputFileName = "";
   std::string paramPath = "";
   std::string binPath = "";
   bool isDebug = false;
-  app.add_option("-i,--input", inputFileName, "Input file location")->required()->check(
+  app.add_option("-i,--input", inputFilePath, "Input file location")->required()->check(
       CLI::ExistingFile);
-  app.add_option("-o,--output", outputFilename, "Output file location");
+  app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-p,--param", paramPath, "ncnn network prototype file (end with .param)")->required()->check(
       CLI::ExistingFile);
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(CLI::ExistingFile);
@@ -79,19 +107,59 @@ int main(int argc, char **argv) {
     spdlog::set_level(spdlog::level::debug);
   }
 
+  auto fileType = getFileType(inputFilePath);
+  if(outputFileName.empty()) {
+    outputFileName = getOutputFileName(inputFilePath);
+  }
+
   yoloFastestv2 api;
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
-  cv::Mat cvImg = cv::imread(inputFileName);
-  auto boxes = detectFrame(cvImg, api, classNames);
-  if (isDebug) {
-//    spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
-    for (TargetBox box: boxes) {
-      spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score, classNames[box.cate]);
+  switch (fileType) {
+    case FileType::Image: {
+      spdlog::info("Input file is image");
+      cv::Mat cvImg = cv::imread(inputFilePath);
+      auto boxes = detectFrame(cvImg, api, classNames);
+      if (isDebug) {
+        // spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
+        for (TargetBox box: boxes) {
+          spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score, classNames[box.cate]);
+        }
+      }
+      cv::imwrite(outputFileName, cvImg);
+      break;
+    }
+    case FileType::Video: {
+      spdlog::info("Input file is video");
+      cv::VideoCapture cap(inputFilePath);
+      if (!cap.isOpened()) {
+        spdlog::error("Cannot open video file");
+        return -1;
+      }
+
+      int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+      int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+      int frame_fps = cap.get(cv::CAP_PROP_FPS);
+
+      cv::VideoWriter outputVideo(outputFileName, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), frame_fps,
+                                  cv::Size(frame_width, frame_height));
+      while (true) {
+        cv::Mat cvImg;
+        cap >> cvImg;
+        if (cvImg.empty()) {
+          break;
+        }
+        auto boxes = detectFrame(cvImg, api, classNames);
+        // cv::imwrite(outputFileName, cvImg);
+        outputVideo.write(cvImg);
+      }
+      break;
+    }
+    default: {
+      spdlog::error("Unsupported file type");
+      return -1;
     }
   }
-  cv::imwrite(outputFilename, cvImg);
-
   return 0;
 }
 
