@@ -62,14 +62,14 @@ FileType getFileType(const std::string fileName) {
   }
 }
 
-int getCodec(const std::string codec){
-  if (codec == "mjpeg"){
+int getCodec(const std::string codec) {
+  if (codec == "mjpeg") {
     return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-  } else if (codec == "h264"){
+  } else if (codec == "h264") {
     return cv::VideoWriter::fourcc('X', '2', '6', '4');
-  } else if (codec == "mp4v"){
+  } else if (codec == "mp4v") {
     return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-  } else if (codec == "mkvh"){
+  } else if (codec == "mkvh") {
     return cv::VideoWriter::fourcc('m', 'k', 'v', 'h');
   } else {
     spdlog::warn("Unknown codec: {}, using mp4v", codec);
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
   }
 
   auto fileType = getFileType(inputFilePath);
-  if(outputFileName.empty()) {
+  if (outputFileName.empty()) {
     outputFileName = getOutputFileName(inputFilePath);
   }
 
@@ -178,10 +178,10 @@ int main(int argc, char **argv) {
         auto end = ncnn::get_current_time();
 
         real_frame_count++;
-        if(frame_count > 0) {
-          spdlog::info("[{}/{}]\t{}ms", real_frame_count, frame_count, end - start);
+        if (frame_count > 0) {
+          spdlog::info("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
         } else {
-          spdlog::info("[{}]\t{}ms", real_frame_count, end - start);
+          spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
         }
       }
       break;
