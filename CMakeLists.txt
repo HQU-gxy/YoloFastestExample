@@ -5,7 +5,6 @@ cmake_minimum_required(VERSION 3.14)
 project( Yolo-Fastestv2 )
 set(CMAKE_CXX_STANDARD 17)
 
-
 # opencv
 find_package( OpenCV REQUIRED )
 
@@ -43,10 +42,18 @@ if(OPENMP_FOUND)
 endif()
 
 # NCNN
-# I have copied the libs from /ncnn/build/install to /usr
+# I have copied the libs from /ncnn/build/install to /usr/local
 # You should set the libs manually in order to compile it
-set(NCNN_LIBS /usr/lib/libncnn.a)
-set(NCNN_INCLUDE_DIRS /usr/include/ncnn)
+# cross compile
+# cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake ..
+# /usr/local/bin is for normal user programs not managed by the distribution package manager,
+# e.g. locally compiled packages.
+# You should not install them into /usr/bin because future distribution upgrades may modify or delete them without warning.
+if(NOT DEFINED NCNN_INSTALL_DIR)
+    set (NCNN_INSTALL_DIR "/usr/local" CACHE STRING "NCNN install directory")
+endif()
+set(NCNN_LIBS ${NCNN_INSTALL_DIR}/lib/libncnn.a)
+set(NCNN_INCLUDE_DIRS ${NCNN_INSTALL_DIR}/include/ncnn)
 
 set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)

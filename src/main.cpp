@@ -18,8 +18,8 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, yoloFastestv2 &api, const std
   auto end = ncnn::get_current_time();
   auto time = end - start;
   spdlog::info("detection time: {} ms", time);
-  cv::putText(cvImg, std::to_string(time) + " ms", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1,
-              cv::Scalar(0, 0, 255), 2);
+//  cv::putText(cvImg, std::to_string(time) + " ms", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1,
+//              cv::Scalar(0, 0, 255), 2);
 
   for (TargetBox box: boxes) {
     char text[256];
@@ -86,17 +86,18 @@ int main(int argc, char **argv) {
       "hair drier", "toothbrush"
   };
 
-
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
   CLI::App app{"A example YOLO Fastest v2 application"};
   std::string inputFilePath = "";
   std::string outputFileName = "";
   std::string paramPath = "";
   std::string binPath = "";
+  float scaledCoeffs = 1.0;
   bool isDebug = false;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required()->check(
       CLI::ExistingFile);
   app.add_option("-o,--output", outputFileName, "Output file location");
+  app.add_option("-s,--scale", scaledCoeffs, "Output file location")->check(CLI::Range(0.0, 1.0));
   app.add_option("-p,--param", paramPath, "ncnn network prototype file (end with .param)")->required()->check(
       CLI::ExistingFile);
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(CLI::ExistingFile);
