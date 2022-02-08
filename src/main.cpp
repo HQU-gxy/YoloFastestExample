@@ -1,6 +1,9 @@
 #include "yolo-fastestv2.h"
+#include "CLI/App.hpp"
+#include "CLI/Formatter.hpp"
+#include "CLI/Config.hpp"
 
-int main() {
+int main(int argc, char** argv) {
   static const char *class_names[] = {
       "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
       "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
@@ -13,28 +16,41 @@ int main() {
       "hair drier", "toothbrush"
   };
 
+  // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
+  CLI::App app{"A example YOLO Fastest v2 application"};
+  std::string inputFileName = "";
+  std::string outputFilename = "output.png";
+  std::string paramPath = "";
+  std::string binPath = "";
+  app.add_option("-i,--input", inputFileName, "Input file location, with extension name of jpg")->required()->check(CLI::ExistingFile);
+  app.add_option("-o,--output", outputFilename, "Output file location, with extension name of png");
+  app.add_option("-p,--param", paramPath, "ncnn network parameters file")->required()->check(CLI::ExistingFile);
+  app.add_option("-b,--bin", binPath, "ncnn network bin file")->required()->check(CLI::ExistingFile);
+
+  CLI11_PARSE(app, argc, argv);
+
   yoloFastestv2 api;
 
-  api.loadModel("./model/yolo-fastestv2-opt.param",
-                "./model/yolo-fastestv2-opt.bin");
+  api.loadModel(paramPath.c_str(), binPath.c_str());
 
-  cv::Mat cvImg = cv::imread("test.jpg");
+  cv::Mat cvImg = cv::imread(inputFileName);
 
   std::vector<TargetBox> boxes;
   api.detection(cvImg, boxes);
 
-  for (int i = 0; i < boxes.size(); i++) {
-    std::cout << boxes[i].x1 << " " << boxes[i].y1 << " " << boxes[i].x2 << " " << boxes[i].y2
-              << " " << boxes[i].score << " " << boxes[i].cate << std::endl;
+  for (TargetBox box : boxes) {
+    // print out the boxes
+    std::cout << box.x1 << " " << box.y1 << " " << box.x2 << " " << box.y2
+              << " " << box.score << " " << class_names[box.cate] << std::endl;
 
     char text[256];
-    sprintf(text, "%s %.1f%%", class_names[boxes[i].cate], boxes[i].score * 100);
+    sprintf(text, "%s %.1f%%", class_names[box.cate], box.score * 100);
 
     int baseLine = 0;
     cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
 
-    int x = boxes[i].x1;
-    int y = boxes[i].y1 - label_size.height - baseLine;
+    int x = box.x1;
+    int y = box.y1 - label_size.height - baseLine;
     if (y < 0)
       y = 0;
     if (x + label_size.width > cvImg.cols)
@@ -46,11 +62,11 @@ int main() {
     cv::putText(cvImg, text, cv::Point(x, y + label_size.height),
                 cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
 
-    cv::rectangle(cvImg, cv::Point(boxes[i].x1, boxes[i].y1),
-                  cv::Point(boxes[i].x2, boxes[i].y2), cv::Scalar(255, 255, 0), 2, 2, 0);
+    cv::rectangle(cvImg, cv::Point(box.x1, box.y1),
+                  cv::Point(box.x2, box.y2), cv::Scalar(255, 255, 0), 2, 2, 0);
   }
 
-  cv::imwrite("output.png", cvImg);
+  cv::imwrite(outputFilename, cvImg);
 
   return 0;
 }

@@ -68,7 +68,9 @@ bool scoreSort(TargetBox a, TargetBox b) {
   return (a.score > b.score);
 }
 
-//NMS处理
+// Non-Maximum Suppression (NMS)
+// https://zhuanlan.zhihu.com/p/84885979
+// https://www.cnblogs.com/makefile/p/nms.html
 int yoloFastestv2::nmsHandle(std::vector<TargetBox> &tmpBoxes,
                              std::vector<TargetBox> &dstBoxes) {
   std::vector<int> picked;
@@ -203,9 +205,7 @@ int yoloFastestv2::detection(const cv::Mat srcImg, std::vector<TargetBox> &dstBo
   std::vector<TargetBox> tmpBoxes;
   //特征图后处理
   predHandle(out, tmpBoxes, scaleW, scaleH, thresh);
-
   //NMS
   nmsHandle(tmpBoxes, dstBoxes);
-
   return 0;
 }

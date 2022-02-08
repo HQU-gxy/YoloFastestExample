@@ -7,6 +7,12 @@ find_package( OpenCV REQUIRED )
 
 set(CMAKE_CXX_STANDARD 17)
 
+# use CLI11 from https://github.com/CLIUtils/CLI11
+if(NOT DEFINED CLI11_DIR)
+    set (CLI11_DIR "lib/CLI11" CACHE STRING "CLI11 git repository")
+endif()
+include_directories(${CLI11_DIR}/include)
+
 # OpenMP
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
@@ -17,13 +23,15 @@ if(OPENMP_FOUND)
 endif()
 
 # NCNN
+# I have copied the libs from /ncnn/build/install to /usr
+# You should set the libs manually in order to compile it
 set(NCNN_LIBS /usr/lib/libncnn.a)
 set(NCNN_INCLUDE_DIRS /usr/include/ncnn)
 
-set(YOLO_FASTEST_INCLUDE_DIRS lib/include)
-set(YOLO_FASTEST_SRC lib/yolo-fastestv2.cpp)
+set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
+set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
-set(MAIN_SRC src/demo.cpp)
+set(MAIN_SRC src/main.cpp)
 
 include_directories( ${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} )
 
