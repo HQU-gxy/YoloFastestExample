@@ -1,8 +1,11 @@
 #include <benchmark.h>
 #include "yolo-fastestv2.h"
 #include "CLI/App.hpp"
+// These include are required
+// DON'T REMOVE
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
+#include "spdlog/spdlog.h"
 
 // not a pure function, will modify the cvImg
 // @param className - the name of the class to be detected (array of strings)
@@ -13,7 +16,7 @@ std::vector<TargetBox> detectFrame(cv::Mat& cvImg, yoloFastestv2& api, const std
   api.detection(cvImg, boxes);
   auto end = ncnn::get_current_time();
   auto time = end - start;
-  std::cout << "Time: " << time << " ms" << std::endl;
+  spdlog::info("detection time: {} ms", time);
   cv::putText(cvImg, std::to_string(time) + " ms", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
 
   for (TargetBox box: boxes) {
@@ -61,23 +64,29 @@ int main(int argc, char **argv) {
   std::string outputFilename = "output.png";
   std::string paramPath = "";
   std::string binPath = "";
+  bool isDebug = false;
   app.add_option("-i,--input", inputFileName, "Input file location")->required()->check(
       CLI::ExistingFile);
   app.add_option("-o,--output", outputFilename, "Output file location");
   app.add_option("-p,--param", paramPath, "ncnn network prototype file (end with .param)")->required()->check(CLI::ExistingFile);
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(CLI::ExistingFile);
+  app.add_flag("-d,--debug", isDebug, "Enable debug log");
 
   CLI11_PARSE(app, argc, argv);
+  if (isDebug) {
+    spdlog::set_level(spdlog::level::debug);
+  }
 
   yoloFastestv2 api;
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
   cv::Mat cvImg = cv::imread(inputFileName);
   auto boxes = detectFrame(cvImg, api, class_names);
-  for (TargetBox box : boxes) {
-    // print out the boxes
-    std::cout << box.x1 << "\t" << box.y1 << "\t" << box.x2 << "\t" << box.y2
-              << "\t" << box.score << "\t" << class_names[box.cate] << std::endl;
+  if(isDebug) {
+//    spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
+    for (TargetBox box : boxes) {
+      spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score, class_names[box.cate]);
+    }
   }
   cv::imwrite(outputFilename, cvImg);
 

@@ -1,10 +1,11 @@
 #include <math.h>
 #include <algorithm>
 #include "yolo-fastestv2.h"
+#include "spdlog/spdlog.h"
 
 //模型的参数配置
 yoloFastestv2::yoloFastestv2() {
-  printf("Creat yoloFastestv2 Detector...\n");
+  spdlog::debug("Creat yoloFastestv2 Detector...");
   //输出节点数
   numOutput = 2;
   //推理线程数
@@ -26,8 +27,8 @@ yoloFastestv2::yoloFastestv2() {
   outputName2 = "796"; //11x11
 
   //打印初始化相关信息
-  printf("numThreads:%d\n", numThreads);
-  printf("inputWidth:%d inputHeight:%d\n", inputWidth, inputHeight);
+  spdlog::debug("number of thread {}", numThreads);
+  spdlog::debug("inputWidth:{} inputHeight:{}", inputWidth, inputHeight);
 
   //anchor box w h
   std::vector<float> bias{12.64, 19.39, 37.88, 51.48, 55.71, 138.31,
@@ -37,17 +38,19 @@ yoloFastestv2::yoloFastestv2() {
 }
 
 yoloFastestv2::~yoloFastestv2() {
-  printf("Destroy yoloFastestv2 Detector...\n");
+  spdlog::debug("Destroy yoloFastestv2 Detector...");
 }
 
 //ncnn 模型加载
 int yoloFastestv2::loadModel(const char *paramPath, const char *binPath) {
-  printf("Ncnn mode init:\n%s\n%s\n", paramPath, binPath);
+  spdlog::info("Load yoloFastestv2 Model...");
+  spdlog::debug("paramPath:{}", paramPath);
+  spdlog::debug("binPath:{}", binPath);
 
   net.load_param(paramPath);
   net.load_model(binPath);
 
-  printf("Ncnn model init sucess...\n");
+  spdlog::info("Ncnn model init sucess...");
 
   return 0;
 }
