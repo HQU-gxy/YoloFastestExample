@@ -1,5 +1,6 @@
 #include <benchmark.h>
 #include <filesystem>
+#include <csignal>
 #include "yolo-fastestv2.h"
 #include "CLI/App.hpp"
 // These include are required
@@ -133,12 +134,13 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<cha
     auto start = ncnn::get_current_time();
     cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
     auto boxes = detectFrame(cvImgResized, api, classNames);
+    outputVideo.write(cvImgResized);
     auto end = ncnn::get_current_time();
-    cv::imshow("Stream",cvImgResized);
+
     int key = cv::waitKey(1);
     if (key == 'q'){
       cv::destroyWindow("Stream");
-       spdlog::info("q key is pressed by the user. Stopping the video");
+      spdlog::info("q key is pressed by the user. Stopping the video");
       break;
     }
 
@@ -199,6 +201,11 @@ int main(int argc, char **argv) {
   YoloFastestV2 api(threadsNum, thresholdNMS);
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
+  signal(SIGINT, [](int sig) {
+    spdlog::info("SIGINT is received. Stopping the application");
+    exit(sig);
+  });
+
   switch (fileType) {
     case FileType::Image: {
       spdlog::info("Input file is image");
@@ -245,7 +252,7 @@ int main(int argc, char **argv) {
       handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
       break;
     }
-    default: {
+    case(FileType::Unknown): {
       spdlog::error("Unsupported file type");
       return -1;
     }
