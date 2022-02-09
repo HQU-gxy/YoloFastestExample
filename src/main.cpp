@@ -9,6 +9,8 @@
 #include "CLI/Config.hpp"
 #include "spdlog/spdlog.h"
 
+bool IsCaptureEnabled = true;
+
 // not a pure function, will modify the cvImg
 // @param classNames - the name of the class to be detected (array of strings)
 std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std::vector<char const *> &classNames) {
@@ -78,8 +80,8 @@ FileType getFileType(const std::string &fileName) {
       spdlog::error("Invalid input {}", fileName);
       return FileType::Unknown;
     }
-      // assume it is a device id can be used as index of cv::VideoCapture
-      return FileType::Stream;
+    // assume it is a device id can be used as index of cv::VideoCapture
+    return FileType::Stream;
   }
   return FileType::Unknown;
 }
@@ -124,7 +126,7 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<cha
   spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Original video frame count: {}", frame_count);
-  while (true) {
+  while (IsCaptureEnabled) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
     cap >> cvImg;
@@ -138,7 +140,7 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<cha
     auto end = ncnn::get_current_time();
 
     int key = cv::waitKey(1);
-    if (key == 'q'){
+    if (key == 'q') {
       cv::destroyWindow("Stream");
       spdlog::info("q key is pressed by the user. Stopping the video");
       break;
@@ -201,9 +203,11 @@ int main(int argc, char **argv) {
   YoloFastestV2 api(threadsNum, thresholdNMS);
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
+  // Use Signal Sign to tell the application to stop
+  // Don't just use exit() or OpenCV won't save the video correctly
   signal(SIGINT, [](int sig) {
     spdlog::info("SIGINT is received. Stopping the application");
-    exit(sig);
+    IsCaptureEnabled = false;
   });
 
   switch (fileType) {
@@ -252,7 +256,7 @@ int main(int argc, char **argv) {
       handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
       break;
     }
-    case(FileType::Unknown): {
+    case (FileType::Unknown): {
       spdlog::error("Unsupported file type");
       return -1;
     }
