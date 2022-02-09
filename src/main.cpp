@@ -44,6 +44,7 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std
 enum FileType {
   Image,
   Video,
+  Stream,
   Unknown
 };
 
@@ -51,19 +52,35 @@ FileType getFileType(const std::string &fileName) {
   std::filesystem::path inputPath(fileName);
   auto inputExtension = inputPath.extension().string();
   // convert to lower case
-  std::for_each(inputExtension.begin(), inputExtension.end(), [](char & c){
+  std::for_each(inputExtension.begin(), inputExtension.end(), [](char &c) {
     c = ::tolower(c);
   });
   spdlog::debug("Input file extension: {}", inputExtension);
-  // TODO: consider to use pattern matching
-  if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
-    return FileType::Image;
-  } else if (inputExtension == ".mp4" || inputExtension == ".avi" || inputExtension == ".mov" ||
-             inputExtension == ".mkv") {
-    return FileType::Video;
+  if (exists(inputPath)) {
+    // TODO: consider to use pattern matching
+    if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
+      if (exists(inputPath)) {}
+      return FileType::Image;
+    } else if (inputExtension == ".mp4" || inputExtension == ".avi" || inputExtension == ".mov" ||
+               inputExtension == ".mkv") {
+      return FileType::Video;
+    }
   } else {
-    return FileType::Unknown;
+    spdlog::warn("Input file {} does not exist. Using input as camera index. ", fileName);
+    try {
+      auto index = std::stoi(fileName);
+      if (index >= 0) {
+        return FileType::Stream;
+      }
+    } catch (std::exception &e) {
+      spdlog::error("Error: {}", e.what());
+      spdlog::error("Invalid input {}", fileName);
+      return FileType::Unknown;
+    }
+      // assume it is a device id can be used as index of cv::VideoCapture
+      return FileType::Stream;
   }
+  return FileType::Unknown;
 }
 
 int getCodec(const std::string &codec) {
@@ -153,8 +170,7 @@ int main(int argc, char **argv) {
   float thresholdNMS = 0.1;
   int threadsNum = 4;
   bool isDebug = false;
-  app.add_option("-i,--input", inputFilePath, "Input file location")->required()->check(
-      CLI::ExistingFile);
+  app.add_option("-i,--input", inputFilePath, "Input file location")->required();
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
   app.add_option("-c,--codec", codec, "Codec for video output");
@@ -166,16 +182,13 @@ int main(int argc, char **argv) {
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(
       CLI::ExistingFile);
   app.add_flag("-d,--debug", isDebug, "Enable debug log");
-
   CLI11_PARSE(app, argc, argv)
+
   if (isDebug) {
     spdlog::set_level(spdlog::level::debug);
   }
 
   auto fileType = getFileType(inputFilePath);
-  if (outputFileName.empty()) {
-    outputFileName = getOutputFileName(inputFilePath);
-  }
 
   YoloFastestV2 api(threadsNum, thresholdNMS);
   api.loadModel(paramPath.c_str(), binPath.c_str());
@@ -183,6 +196,9 @@ int main(int argc, char **argv) {
   switch (fileType) {
     case FileType::Image: {
       spdlog::info("Input file is image");
+      if (outputFileName.empty()) {
+        outputFileName = getOutputFileName(inputFilePath);
+      }
       cv::Mat cvImg = cv::imread(inputFilePath);
       auto boxes = detectFrame(cvImg, api, classNames);
       if (isDebug) {
@@ -196,12 +212,30 @@ int main(int argc, char **argv) {
     }
     case FileType::Video: {
       spdlog::info("Input file is video");
+      if (outputFileName.empty()) {
+        outputFileName = getOutputFileName(inputFilePath);
+      }
       cv::VideoCapture cap(inputFilePath);
       if (!cap.isOpened()) {
         spdlog::error("Cannot open video file");
         return -1;
       }
       int codecCV = getCodec(codec);
+      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
+      break;
+    }
+    case FileType::Stream: {
+      auto index = std::stoi(inputFilePath);
+      spdlog::info("Streaming from camera {}", index);
+      cv::VideoCapture cap(index);
+      if (!cap.isOpened()) {
+        spdlog::error("Cannot open video file");
+        return -1;
+      }
+      int codecCV = getCodec(codec);
+      if (outputFileName.empty()) {
+        outputFileName = std::to_string(index) + "-out.mp4";
+      }
       handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
       break;
     }
