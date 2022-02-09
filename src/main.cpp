@@ -133,8 +133,14 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<cha
     auto start = ncnn::get_current_time();
     cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
     auto boxes = detectFrame(cvImgResized, api, classNames);
-    outputVideo.write(cvImgResized);
     auto end = ncnn::get_current_time();
+    cv::imshow("Stream",cvImgResized);
+    int key = cv::waitKey(1);
+    if (key == 'q'){
+      cv::destroyWindow("Stream");
+       spdlog::info("q key is pressed by the user. Stopping the video");
+      break;
+    }
 
     real_frame_count++;
     if (frame_count > 0) {
