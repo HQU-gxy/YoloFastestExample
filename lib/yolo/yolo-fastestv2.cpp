@@ -4,18 +4,18 @@
 #include "spdlog/spdlog.h"
 
 //模型的参数配置
-yoloFastestv2::yoloFastestv2() {
-  spdlog::debug("Creat yoloFastestv2 Detector...");
+YoloFastestV2::YoloFastestV2(int threadsNum, float thresholdNMS) {
+  spdlog::debug("Create Yolo Fastest v2 Detector...");
   //输出节点数
   numOutput = 2;
   //推理线程数
-  numThreads = 4;
+  numThreads = threadsNum;
   //anchor num
   numAnchor = 3;
   //类别数目
   numCategory = 80;
   //NMS阈值
-  nmsThresh = 0.25;
+  nmsThresh = thresholdNMS;
 
   //模型输入尺寸大小
   inputWidth = 352;
@@ -37,13 +37,13 @@ yoloFastestv2::yoloFastestv2() {
   anchor.assign(bias.begin(), bias.end());
 }
 
-yoloFastestv2::~yoloFastestv2() {
-  spdlog::debug("Destroy yoloFastestv2 Detector...");
+YoloFastestV2::~YoloFastestV2() {
+  spdlog::debug("Destroy YoloFastestV2 Detector...");
 }
 
 //ncnn 模型加载
-int yoloFastestv2::loadModel(const char *paramPath, const char *binPath) {
-  spdlog::info("Load yoloFastestv2 Model...");
+int YoloFastestV2::loadModel(const char *paramPath, const char *binPath) {
+  spdlog::info("Load YoloFastestV2 Model...");
   spdlog::debug("paramPath:{}", paramPath);
   spdlog::debug("binPath:{}", binPath);
 
@@ -74,7 +74,7 @@ bool scoreSort(TargetBox a, TargetBox b) {
 // Non-Maximum Suppression (NMS)
 // https://zhuanlan.zhihu.com/p/84885979
 // https://www.cnblogs.com/makefile/p/nms.html
-int yoloFastestv2::nmsHandle(std::vector<TargetBox> &tmpBoxes,
+int YoloFastestV2::nmsHandle(std::vector<TargetBox> &tmpBoxes,
                              std::vector<TargetBox> &dstBoxes) {
   std::vector<int> picked;
 
@@ -108,7 +108,7 @@ int yoloFastestv2::nmsHandle(std::vector<TargetBox> &tmpBoxes,
 }
 
 //检测类别分数处理
-int yoloFastestv2::getCategory(const float *values, int index, int &category, float &score) {
+int YoloFastestV2::getCategory(const float *values, int index, int &category, float &score) {
   float tmp = 0;
   float objScore = values[4 * numAnchor + index];
 
@@ -128,7 +128,7 @@ int yoloFastestv2::getCategory(const float *values, int index, int &category, fl
 }
 
 //特征图后处理
-int yoloFastestv2::predHandle(const ncnn::Mat *out, std::vector<TargetBox> &dstBoxes,
+int YoloFastestV2::predHandle(const ncnn::Mat *out, std::vector<TargetBox> &dstBoxes,
                               const float scaleW, const float scaleH, const float thresh) {    //do result
   for (int i = 0; i < numOutput; i++) {
     int stride;
@@ -178,7 +178,7 @@ int yoloFastestv2::predHandle(const ncnn::Mat *out, std::vector<TargetBox> &dstB
   return 0;
 }
 
-int yoloFastestv2::detection(const cv::Mat srcImg, std::vector<TargetBox> &dstBoxes, const float thresh) {
+int YoloFastestV2::detection(const cv::Mat srcImg, std::vector<TargetBox> &dstBoxes, const float thresh) {
   dstBoxes.clear();
 
   float scaleW = (float) srcImg.cols / (float) inputWidth;

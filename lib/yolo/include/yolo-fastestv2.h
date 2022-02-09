@@ -24,7 +24,7 @@ public:
   float area() { return getWidth() * getHeight(); };
 };
 
-class yoloFastestv2 {
+class YoloFastestV2 {
 private:
   ncnn::Net net;
   std::vector<float> anchor;
@@ -49,9 +49,9 @@ private:
                  const float scaleW, const float scaleH, const float thresh);
 
 public:
-  yoloFastestv2();
+  YoloFastestV2(int threadsNum = 4, float thresholdNMS = 0.25);
 
-  ~yoloFastestv2();
+  ~YoloFastestV2();
 
   int loadModel(const char *paramPath, const char *binPath);
 
