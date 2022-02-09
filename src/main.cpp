@@ -50,6 +50,10 @@ enum FileType {
 FileType getFileType(const std::string &fileName) {
   std::filesystem::path inputPath(fileName);
   auto inputExtension = inputPath.extension().string();
+  // convert to lower case
+  std::for_each(inputExtension.begin(), inputExtension.end(), [](char & c){
+    c = ::tolower(c);
+  });
   spdlog::debug("Input file extension: {}", inputExtension);
   // TODO: consider to use pattern matching
   if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
