@@ -40,7 +40,7 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std
 }
 
 int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, int codec, float scaledCoeffs) {
+                const std::string &outputFileName, int codec, float scaledCoeffs, float outFps) {
 
   int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
@@ -48,13 +48,18 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
   int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
   int real_frame_count = 0;
 
+  if (outFps == 0) {
+    outFps = frame_fps;
+  }
+
   spdlog::debug("Output video codec fourcc: 0x{0:x}", codec);
-  cv::VideoWriter outputVideo(outputFileName, codec, frame_fps,
+  cv::VideoWriter outputVideo(outputFileName, codec, outFps,
                               cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
 
   spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
   spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
   spdlog::debug("Original video fps: {}", frame_fps);
+  spdlog::debug("Output video fps: {}", outFps);
   spdlog::debug("Original video frame count: {}", frame_count);
   while (IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;

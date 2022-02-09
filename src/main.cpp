@@ -30,11 +30,13 @@ int main(int argc, char **argv) {
   std::string codec = "mp4v";
   float scaledCoeffs = 1.0;
   float thresholdNMS = 0.1;
+  float outFps = 0.0;
   int threadsNum = 4;
   bool isDebug = false;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required();
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
+  app.add_option("--out-fps", outFps, "Manually set output fps")->check(CLI::Range(0.0, 60.0));
   app.add_option("-c,--codec", codec, "Codec for video output");
   app.add_option("--nms", thresholdNMS, "NMS threshold for video output")->check(CLI::Range(0.0, 1.0));
   // I don't think there is anyone running this application on more than 16 thread
@@ -90,7 +92,7 @@ int main(int argc, char **argv) {
         return -1;
       }
       int codecCV = getCodec(codec);
-      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
+      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs, outFps);
       break;
     }
     case FileType::Stream: {
@@ -105,7 +107,7 @@ int main(int argc, char **argv) {
       if (outputFileName.empty()) {
         outputFileName = std::to_string(index) + "-out.mp4";
       }
-      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs);
+      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs, outFps);
       break;
     }
     case (FileType::Unknown): {
