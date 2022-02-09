@@ -57,9 +57,10 @@ set(NCNN_INCLUDE_DIRS ${NCNN_INSTALL_DIR}/include/ncnn)
 set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
-set(MAIN_SRC src/main.cpp)
+set(MAIN_INCLUDE_DIRS src/include)
+set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp)
 
-include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} ${MAIN_INCLUDE_DIRS})
 
 add_executable(Yolo-Fastestv2 ${MAIN_SRC} ${YOLO_FASTEST_SRC})
 target_link_libraries(Yolo-Fastestv2 ${NCNN_LIBS})

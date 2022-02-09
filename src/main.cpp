@@ -1,160 +1,12 @@
-#include <benchmark.h>
-#include <filesystem>
 #include <csignal>
-#include "yolo-fastestv2.h"
 #include "CLI/App.hpp"
 // These include are required
 // DON'T REMOVE
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
-#include "spdlog/spdlog.h"
 
-bool IsCaptureEnabled = true;
-
-// not a pure function, will modify the cvImg
-// @param classNames - the name of the class to be detected (array of strings)
-std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std::vector<char const *> &classNames) {
-  std::vector<TargetBox> boxes;
-
-  api.detection(cvImg, boxes);
-
-  for (TargetBox box: boxes) {
-    char text[256];
-    sprintf(text, "%s %.1f%%", classNames[box.cate], box.score * 100);
-
-    int baseLine = 0;
-    cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
-    int x = box.x1;
-    int y = box.y1 - label_size.height - baseLine;
-    if (y < 0)
-      y = 0;
-    if (x + label_size.width > cvImg.cols)
-      x = cvImg.cols - label_size.width;
-
-    cv::rectangle(cvImg, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
-                  cv::Scalar(255, 255, 255), -1);
-
-    cv::putText(cvImg, text, cv::Point(x, y + label_size.height),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-
-    cv::rectangle(cvImg, cv::Point(box.x1, box.y1),
-                  cv::Point(box.x2, box.y2), cv::Scalar(255, 255, 0), 2, 2, 0);
-  }
-  return boxes;
-}
-
-enum FileType {
-  Image,
-  Video,
-  Stream,
-  Unknown
-};
-
-FileType getFileType(const std::string &fileName) {
-  std::filesystem::path inputPath(fileName);
-  auto inputExtension = inputPath.extension().string();
-  // convert to lower case
-  std::for_each(inputExtension.begin(), inputExtension.end(), [](char &c) {
-    c = ::tolower(c);
-  });
-  spdlog::debug("Input file extension: {}", inputExtension);
-  if (exists(inputPath)) {
-    // TODO: consider to use pattern matching
-    if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
-      if (exists(inputPath)) {}
-      return FileType::Image;
-    } else if (inputExtension == ".mp4" || inputExtension == ".avi" || inputExtension == ".mov" ||
-               inputExtension == ".mkv") {
-      return FileType::Video;
-    }
-  } else {
-    spdlog::warn("Input file {} does not exist. Using input as camera index. ", fileName);
-    try {
-      auto index = std::stoi(fileName);
-      if (index >= 0) {
-        return FileType::Stream;
-      }
-    } catch (std::exception &e) {
-      spdlog::error("Error: {}", e.what());
-      spdlog::error("Invalid input {}", fileName);
-      return FileType::Unknown;
-    }
-    // assume it is a device id can be used as index of cv::VideoCapture
-    return FileType::Stream;
-  }
-  return FileType::Unknown;
-}
-
-int getCodec(const std::string &codec) {
-  if (codec == "mjpeg") {
-    return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-  } else if (codec == "x264") {
-    return cv::VideoWriter::fourcc('X', '2', '6', '4');
-  } else if (codec == "h264") {
-    return cv::VideoWriter::fourcc('H', '2', '6', '4');
-  } else if (codec == "mp4v") {
-    return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-  } else if (codec == "mkvh") {
-    return cv::VideoWriter::fourcc('m', 'k', 'v', 'h');
-  } else {
-    spdlog::warn("Unknown codec: {}, using mp4v", codec);
-    return cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-  }
-}
-
-std::string getOutputFileName(const std::string &inputFileName, const std::string postFix = "-out") {
-  std::filesystem::path inputPath(inputFileName);
-  return inputPath.stem().string() + postFix + inputPath.extension().string();
-}
-
-// TODO: use struct as option instead of params
-int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<char const *> &classNames,
-                const std::string &outputFileName, int codec, float scaledCoeffs) {
-
-  int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-  int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-  int frame_fps = cap.get(cv::CAP_PROP_FPS);
-  int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
-  int real_frame_count = 0;
-
-  spdlog::debug("Output video codec fourcc: 0x{0:x}", codec);
-  cv::VideoWriter outputVideo(outputFileName, codec, frame_fps,
-                              cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
-
-  spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
-  spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
-  spdlog::debug("Original video fps: {}", frame_fps);
-  spdlog::debug("Original video frame count: {}", frame_count);
-  while (IsCaptureEnabled) {
-    cv::Mat cvImg;
-    cv::Mat cvImgResized;
-    cap >> cvImg;
-    if (cvImg.empty()) {
-      break;
-    }
-    auto start = ncnn::get_current_time();
-    cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
-    auto boxes = detectFrame(cvImgResized, api, classNames);
-    outputVideo.write(cvImgResized);
-    auto end = ncnn::get_current_time();
-
-    int key = cv::waitKey(1);
-    if (key == 'q') {
-      cv::destroyWindow("Stream");
-      spdlog::info("q key is pressed by the user. Stopping the video");
-      break;
-    }
-
-    real_frame_count++;
-    if (frame_count > 0) {
-      spdlog::info("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
-    } else {
-      spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
-    }
-  }
-  return 0;
-}
+#include "include/detect.h"
+#include "include/utils.h"
 
 int main(int argc, char **argv) {
   static const std::vector<char const *> classNames = {
@@ -207,7 +59,7 @@ int main(int argc, char **argv) {
   // Don't just use exit() or OpenCV won't save the video correctly
   signal(SIGINT, [](int sig) {
     spdlog::info("SIGINT is received. Stopping the application");
-    IsCaptureEnabled = false;
+    IS_CAPTURE_ENABLED = false;
   });
 
   switch (fileType) {
