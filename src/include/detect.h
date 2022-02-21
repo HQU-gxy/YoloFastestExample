@@ -11,7 +11,9 @@
 
 extern bool IS_CAPTURE_ENABLED;
 
-std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std::vector<char const *> &classNames);
+std::vector<TargetBox> detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
+
+auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
 
 // TODO: use struct as option instead of params
 int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,

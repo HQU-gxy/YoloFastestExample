@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         outputFileName = getOutputFileName(inputFilePath);
       }
       cv::Mat cvImg = cv::imread(inputFilePath);
-      auto boxes = detectFrame(cvImg, api, classNames);
+      auto boxes = detectFrame(cvImg, cvImg,api, classNames);
       if (isDebug) {
         // spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
         for (TargetBox box: boxes) {
