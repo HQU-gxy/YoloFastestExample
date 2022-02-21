@@ -40,8 +40,7 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std
 }
 
 int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, int codec, float scaledCoeffs, float outFps) {
-
+                const std::string &outputFileName, const std::string &rtmpUrl, float scaledCoeffs, float outFps) {
   int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   int frame_fps = cap.get(cv::CAP_PROP_FPS);
@@ -52,8 +51,22 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
     outFps = frame_fps;
   }
 
-  spdlog::debug("Output video codec fourcc: 0x{0:x}", codec);
-  cv::VideoWriter outputVideo(outputFileName, codec, outFps,
+  // apiReference using gstreamer
+  // fourcc 0 means uncompressed
+  // using OpenCV's Gstreamer API
+  // gst-plugins-bad
+  // gst-launch-1.0 -v videotestsrc ! x264enc ! flvmux ! rtmpsink location='rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk'
+  // gst-launch-1.0 videotestsrc is-live=true ! x264enc  pass=5 quantizer=25 speed-preset=6 ! video/x-h264, profile=baseline  ! flvmux ! rtmpsink location='rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk'
+  // gst-inspect-1.0 | grep x264
+  // ffmpeg -re -i demo.flv -c copy -f flv rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk
+
+  const std::string pipeline = "appsrc ! "
+                               "videoconvert ! "
+                               "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
+                               "video/x-h264, profile=baseline ! "
+                               "flvmux ! "
+                               "rtmpsink location=" + rtmpUrl;
+  cv::VideoWriter outputVideo(pipeline, cv::CAP_GSTREAMER, 0, outFps,
                               cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
 
   spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
@@ -73,13 +86,6 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
     auto boxes = detectFrame(cvImgResized, api, classNames);
     outputVideo.write(cvImgResized);
     auto end = ncnn::get_current_time();
-
-    int key = cv::waitKey(1);
-    if (key == 'q') {
-      cv::destroyWindow("Stream");
-      spdlog::info("q key is pressed by the user. Stopping the video");
-      break;
-    }
 
     real_frame_count++;
     if (frame_count > 0) {

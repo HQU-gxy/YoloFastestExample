@@ -15,6 +15,6 @@ std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std
 
 // TODO: use struct as option instead of params
 int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, int codec, float scaledCoeffs, float outFps);
+                const std::string &outputFileName, const std::string &rtmpUrl, float scaledCoeffs, float outFps);
 #endif //YOLO_FASTESTV2_DETECT_H
 

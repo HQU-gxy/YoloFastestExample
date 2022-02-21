@@ -31,6 +31,12 @@ if (NOT DEFINED CLI11_DIR)
 endif ()
 include_directories(${CLI11_DIR}/include)
 
+# use https://github.com/HowardHinnant/date
+if (NOT DEFINED DATE_DIR)
+    set(DATE_DIR "lib/date" CACHE STRING "HowardHinnant/date git repository")
+endif ()
+include_directories(${DATE_DIR}/include/date)
+
 # OpenMP
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -39,6 +45,14 @@ if (OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif ()
+
+# use pkg-config to find glib and gstreamer
+# pkg-config --list-all to list all packages
+#find_package(PkgConfig)
+#pkg_search_module(GLIB REQUIRED glib-2.0)
+#pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+#pkg_check_modules(GST_APP REQUIRED gstreamer-app-1.0)
+#pkg_check_modules(GST_VIDEO REQUIRED gstreamer-video-1.0)
 
 # NCNN
 # I have copied the libs from /ncnn/build/install to /usr/local

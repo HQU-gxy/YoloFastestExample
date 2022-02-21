@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   std::string outputFileName;
   std::string paramPath;
   std::string binPath;
-  std::string codec = "mp4v";
+  std::string rtmpUrl;
   float scaledCoeffs = 1.0;
   float thresholdNMS = 0.1;
   float outFps = 0.0;
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
   app.add_option("--out-fps", outFps, "Manually set output fps")->check(CLI::Range(0.0, 60.0));
-  app.add_option("-c,--codec", codec, "Codec for video output");
+  app.add_option("--rtmp", rtmpUrl, "The url of RTMP server. started with 'rtmp://'")->required();
   app.add_option("--nms", thresholdNMS, "NMS threshold for video output")->check(CLI::Range(0.0, 1.0));
   // I don't think there is anyone running this application on more than 16 thread
   app.add_option("-j", threadsNum, "Threads number")->check(CLI::Range(1, 16));
@@ -91,8 +91,7 @@ int main(int argc, char **argv) {
         spdlog::error("Cannot open video file");
         return -1;
       }
-      int codecCV = getCodec(codec);
-      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs, outFps);
+      handleVideo(cap, api, classNames, outputFileName, rtmpUrl, scaledCoeffs, outFps);
       break;
     }
     case FileType::Stream: {
@@ -103,11 +102,10 @@ int main(int argc, char **argv) {
         spdlog::error("Cannot open video file");
         return -1;
       }
-      int codecCV = getCodec(codec);
       if (outputFileName.empty()) {
         outputFileName = std::to_string(index) + "-out.mp4";
       }
-      handleVideo(cap, api, classNames, outputFileName, codecCV, scaledCoeffs, outFps);
+      handleVideo(cap, api, classNames, outputFileName, rtmpUrl, scaledCoeffs, outFps);
       break;
     }
     case (FileType::Unknown): {
