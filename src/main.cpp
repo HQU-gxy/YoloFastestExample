@@ -57,10 +57,17 @@ int main(int argc, char **argv) {
   YoloFastestV2 api(threadsNum, thresholdNMS);
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
+  // Ctrl + C
   // Use Signal Sign to tell the application to stop
-  // Don't just use exit() or OpenCV won't save the video correctly
   signal(SIGINT, [](int sig) {
-    spdlog::info("SIGINT is received. Stopping the application");
+    spdlog::error("SIGINT is received. Force stopping the application");
+    exit(1);
+  });
+
+  // Ctrl + Z
+  // Don't just use exit() or OpenCV won't save the video correctly
+  signal(SIGTSTP, [](int sig) {
+    spdlog::warn("SIGTSTP is received. Stopping capture");
     IS_CAPTURE_ENABLED = false;
   });
 
