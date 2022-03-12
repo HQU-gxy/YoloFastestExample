@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 
-enum FileType {
+enum class FileType {
   Image,
   Video,
   Stream,

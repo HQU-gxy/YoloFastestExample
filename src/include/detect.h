@@ -9,7 +9,11 @@
 #include <benchmark.h>
 #include "spdlog/spdlog.h"
 
-extern bool IS_CAPTURE_ENABLED;
+// Use namespace to avoid conflict with other libraries
+// But define a namespace
+namespace YOLO {
+  extern bool IS_CAPTURE_ENABLED;
+}
 
 std::vector<TargetBox> detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
 

@@ -6,9 +6,9 @@
 #include "date.h"
 #include "math.h"
 
-bool IS_CAPTURE_ENABLED = true;
+bool YOLO::IS_CAPTURE_ENABLED = true;
 
-// not a pure function, will modify the detectImg
+// not a pure function, will modify the drawImg
 // @param classNames - the name of the class to be detected (array of strings)
 std::vector<TargetBox>
 detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames) {
@@ -110,7 +110,8 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Output video fps: {}", outFps);
   spdlog::debug("Original video frame count: {}", frame_count);
-  while (IS_CAPTURE_ENABLED) {
+  spdlog::debug("{}", pipeline);
+  while (YOLO::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
     cap >> cvImg;
@@ -144,3 +145,10 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
   }
   return 0;
 }
+
+
+
+class VideoHandler {
+public:
+  VideoHandler(){}
+};

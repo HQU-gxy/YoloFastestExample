@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
   // Don't just use exit() or OpenCV won't save the video correctly
   signal(SIGTSTP, [](int sig) {
     spdlog::warn("SIGTSTP is received. Stopping capture");
-    IS_CAPTURE_ENABLED = false;
+    YOLO::IS_CAPTURE_ENABLED = false;
   });
 
   switch (fileType) {
