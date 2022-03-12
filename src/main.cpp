@@ -1,12 +1,13 @@
 #include <csignal>
+#include "asio.hpp"
+#include "include/detect.h"
+#include "include/utils.h"
 #include "CLI/App.hpp"
 // These include are required
 // DON'T REMOVE
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
-#include "include/detect.h"
-#include "include/utils.h"
 
 int main(int argc, char **argv) {
   static const std::vector<char const *> classNames = {
