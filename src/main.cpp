@@ -1,27 +1,11 @@
 #include <csignal>
-#include "asio.hpp"
 #include "include/detect.h"
 #include "include/utils.h"
 #include "CLI/App.hpp"
-// These include are required
-// DON'T REMOVE
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
-
 int main(int argc, char **argv) {
-  static const std::vector<char const *> classNames = {
-      "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-      "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-      "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-      "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-      "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-      "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-      "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-      "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-      "hair drier", "toothbrush"
-  };
-
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
   CLI::App app{"A example YOLO Fastest v2 application"};
   std::string inputFilePath;
@@ -32,11 +16,14 @@ int main(int argc, char **argv) {
   float scaledCoeffs = 1.0;
   float thresholdNMS = 0.1;
   float outFps = 0.0;
+  float cropCoeffs = 0.1;
   int threadsNum = 4;
   bool isDebug = false;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required();
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
+  app.add_option("--crop", cropCoeffs, "The rectangle box that recognise the door of elevator")->check(
+      CLI::Range(0.0, 0.4));
   app.add_option("--out-fps", outFps, "Manually set output fps")->check(CLI::Range(0.0, 60.0));
   app.add_option("--rtmp", rtmpUrl, "The url of RTMP server. started with 'rtmp://'")->required();
   app.add_option("--nms", thresholdNMS, "NMS threshold for video output")->check(CLI::Range(0.0, 1.0));
@@ -56,6 +43,13 @@ int main(int argc, char **argv) {
   auto fileType = getFileType(inputFilePath);
 
   YoloFastestV2 api(threadsNum, thresholdNMS);
+  YOLO::VideoOptions videoOptions{
+      .outputFileName = outputFileName,
+      .rtmpUrl = rtmpUrl,
+      .scaledCoeffs = scaledCoeffs,
+      .cropCoeffs = cropCoeffs,
+      .outFps = outFps,
+  };
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
   // Ctrl + C
@@ -79,11 +73,12 @@ int main(int argc, char **argv) {
         outputFileName = getOutputFileName(inputFilePath);
       }
       cv::Mat cvImg = cv::imread(inputFilePath);
-      auto boxes = detectFrame(cvImg, cvImg,api, classNames);
+      auto boxes = YOLO::detectFrame(cvImg, cvImg, api, YOLO::classNames);
       if (isDebug) {
         // spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
         for (TargetBox box: boxes) {
-          spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score, classNames[box.cate]);
+          spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score,
+                        YOLO::classNames[box.cate]);
         }
       }
       cv::imwrite(outputFileName, cvImg);
@@ -97,9 +92,14 @@ int main(int argc, char **argv) {
       cv::VideoCapture cap(inputFilePath);
       if (!cap.isOpened()) {
         spdlog::error("Cannot open video file");
-        return -1;
+        return YOLO::Error::FAILURE;
       }
-      handleVideo(cap, api, classNames, outputFileName, rtmpUrl, scaledCoeffs, outFps);
+      auto writer = YOLO::VideoHandler::getInitialVideoWriter(cap, videoOptions,
+                                                              YOLO::base_pipeline +
+                                                              videoOptions.rtmpUrl);
+      YOLO::VideoHandler handler{cap, api, writer,
+                                 YOLO::classNames, videoOptions};
+      handler.run();
       break;
     }
     case FileType::Stream: {
@@ -108,20 +108,22 @@ int main(int argc, char **argv) {
       cv::VideoCapture cap(index);
       if (!cap.isOpened()) {
         spdlog::error("Cannot open video file");
-        return -1;
+        return YOLO::Error::FAILURE;
       }
-      if (outputFileName.empty()) {
-        outputFileName = std::to_string(index) + "-out.mp4";
-      }
-      handleVideo(cap, api, classNames, outputFileName, rtmpUrl, scaledCoeffs, outFps);
+      auto writer = YOLO::VideoHandler::getInitialVideoWriter(cap, videoOptions,
+                                                              YOLO::base_pipeline +
+                                                              videoOptions.rtmpUrl);
+      YOLO::VideoHandler handler{cap, api, writer,
+                                 YOLO::classNames, videoOptions};
+      handler.run();
       break;
     }
     case (FileType::Unknown): {
       spdlog::error("Unsupported file type");
-      return -1;
+      return YOLO::Error::FAILURE;
     }
   }
-  return 0;
+  return YOLO::Error::SUCCESS;
 }
 
 

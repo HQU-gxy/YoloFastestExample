@@ -6,12 +6,33 @@
 #include "date.h"
 #include "math.h"
 
+using namespace YOLO;
+
+// a global flag in order to make signal function work
 bool YOLO::IS_CAPTURE_ENABLED = true;
+const std::vector<char const *> YOLO::classNames = {
+    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
+    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
+    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
+    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
+    "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
+    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
+    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
+    "hair drier", "toothbrush"
+};
+const std::string YOLO::base_pipeline = "appsrc ! "
+                                        "videoconvert ! "
+                                        "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
+                                        "video/x-h264, profile=baseline ! "
+                                        "flvmux ! "
+                                        "rtmpsink location=";
 
 // not a pure function, will modify the drawImg
 // @param classNames - the name of the class to be detected (array of strings)
 std::vector<TargetBox>
-detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames) {
+YOLO::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
+                  const std::vector<const char *> &classNames) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -50,7 +71,7 @@ auto drawTime(cv::Mat &drawImg) {
               cv::LINE_AA);
 }
 
-auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
+auto YOLO::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
@@ -58,7 +79,7 @@ auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
   cv::GaussianBlur(detectImg, processedImg, cv::Size(5, 5), 0, 0);
   cv::Canny(processedImg, edges, 100, 200);
   cv::HoughLinesP(edges, lines, 0.5, CV_PI / 180, 30, 50, 10);
-  if (!lines.empty()){
+  if (!lines.empty()) {
     auto newDrawImg = drawImg(cropRect);
     lines.forEach<cv::Vec4i>([&](cv::Vec4i &line, const int *position) {
       auto x1 = line[0];
@@ -75,42 +96,49 @@ auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
   }
 }
 
-int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, const std::string &rtmpUrl, float scaledCoeffs, float outFps) {
+void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
+  auto original_writer = this->video_writer;
+  this->video_writer = writer;
+  original_writer.release();
+}
+
+void VideoHandler::setOpts(const YOLO::VideoOptions &opts) {
+  VideoHandler::opts = opts;
+}
+
+cv::VideoWriter
+VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YOLO::VideoOptions opts, const std::string pipeline) {
+  const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+  const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+  const int frame_fps = cap.get(cv::CAP_PROP_FPS);
+  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
+  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+}
+
+// I should move the ownership of cap and YoloFastestV2 API to VideoHandler
+VideoHandler::VideoHandler(cv::VideoCapture &cap,
+                           YoloFastestV2 &api,
+                           cv::VideoWriter &writer,
+                           const std::vector<const char *> classNames,
+                           const YOLO::VideoOptions opts) : cap{cap}, api{api}, classNames{classNames}, opts{opts},
+                                                            video_writer{writer} {}
+
+int VideoHandler::run() {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   const int frame_fps = cap.get(cv::CAP_PROP_FPS);
   const int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
   int real_frame_count = 0;
-  const auto CROP_COEF = 0.1;
+  const auto CROP_COEF = opts.cropCoeffs;
 
-  if (outFps == 0) {
-    outFps = frame_fps;
-  }
-
-  // apiReference using gstreamer
-  // fourcc 0 means uncompressed
-  // using OpenCV's Gstreamer API
-  // gst-launch-1.0 -v videotestsrc ! x264enc ! flvmux ! rtmpsink location='rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk'
-  // gst-launch-1.0 videotestsrc is-live=true ! x264enc  pass=5 quantizer=25 speed-preset=6 ! video/x-h264, profile=baseline  ! flvmux ! rtmpsink location='rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk'
-  // gst-inspect-1.0 | grep x264
-  // ffmpeg -re -i demo.flv -c copy -f flv rtmp://localhost:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk
-
-  const std::string pipeline = "appsrc ! "
-                               "videoconvert ! "
-                               "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
-                               "video/x-h264, profile=baseline ! "
-                               "flvmux ! "
-                               "rtmpsink location=" + rtmpUrl;
-  cv::VideoWriter outputVideo(pipeline, cv::CAP_GSTREAMER, 0, outFps,
-                              cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
+  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
 
   spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
-  spdlog::debug("Output video size: {}x{}", frame_width * scaledCoeffs, frame_height * scaledCoeffs);
+  spdlog::debug("Output video size: {}x{}", frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs);
   spdlog::debug("Original video fps: {}", frame_fps);
-  spdlog::debug("Output video fps: {}", outFps);
+  spdlog::debug("Output video fps: {}", out_framerate);
   spdlog::debug("Original video frame count: {}", frame_count);
-  spdlog::debug("{}", pipeline);
   while (YOLO::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
@@ -119,21 +147,21 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
       break;
     }
     auto start = ncnn::get_current_time();
-    cv::resize(cvImg, cvImgResized, cv::Size(frame_width * scaledCoeffs, frame_height * scaledCoeffs));
+    cv::resize(cvImg, cvImgResized, cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 
-    const auto vertical_middle = frame_width * scaledCoeffs / 2;
-    const auto crop_right_pt = vertical_middle + (frame_width * scaledCoeffs * CROP_COEF);
-    const auto crop_left_pt = vertical_middle - (frame_width * scaledCoeffs * CROP_COEF);
+    const auto vertical_middle = frame_width * opts.scaledCoeffs / 2;
+    const auto crop_right_pt = vertical_middle + (frame_width * opts.scaledCoeffs * CROP_COEF);
+    const auto crop_left_pt = vertical_middle - (frame_width * opts.scaledCoeffs * CROP_COEF);
     const auto length = crop_right_pt - crop_left_pt;
     auto cropRect = cv::Rect(crop_left_pt, 0, length, length);
     auto origImg = cvImgResized.clone();
     auto croppedImg = cvImgResized(cropRect);
 
     detectDoor(croppedImg, cvImgResized, cropRect);
-    cv::rectangle(cvImgResized,cropRect, cv::Scalar(0, 204, 255), 2, cv::LINE_AA);
+    cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
     auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
     drawTime(cvImgResized);
-    outputVideo.write(cvImgResized);
+    video_writer.write(cvImgResized);
     auto end = ncnn::get_current_time();
 
     real_frame_count++;
@@ -143,12 +171,5 @@ int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<con
       spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
     }
   }
-  return 0;
+  return YOLO::Error::SUCCESS;
 }
-
-
-
-class VideoHandler {
-public:
-  VideoHandler(){}
-};

@@ -12,15 +12,55 @@
 // Use namespace to avoid conflict with other libraries
 // But define a namespace
 namespace YOLO {
+  enum Error {
+    SUCCESS = 0,
+    FAILURE = 1
+  };
   extern bool IS_CAPTURE_ENABLED;
+  extern const std::vector<char const *> classNames;
+  extern const std::string base_pipeline;
+  struct VideoOptions {
+    std::string outputFileName;
+    std::string rtmpUrl;
+    float scaledCoeffs = 1.0;
+    // Maybe I should use the exact coordinate
+    float cropCoeffs = 0.1;
+    float outFps = 5;
+  };
+
+  std::vector<TargetBox>
+  detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
+
+  auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
+
+  int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
+                  const YOLO::VideoOptions opts);
+
+  class VideoHandler {
+  private:
+    cv::VideoCapture &cap;
+    YoloFastestV2 &api;
+    cv::VideoWriter &video_writer;
+    const std::vector<const char *> classNames;
+    YOLO::VideoOptions opts;
+  public:
+    void setOpts(const YOLO::VideoOptions &opts);
+
+    void setVideoWriter(cv::VideoWriter &writer);
+
+    static cv::VideoWriter
+    getInitialVideoWriter(cv::VideoCapture &cap, const YOLO::VideoOptions opts, const std::string pipeline);
+
+    VideoHandler(cv::VideoCapture &cap,
+                 YoloFastestV2 &api,
+                 cv::VideoWriter &writer,
+                 const std::vector<const char *> classNames,
+                 const YOLO::VideoOptions opts);
+
+    int run();
+  };
 }
 
-std::vector<TargetBox> detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
 
-auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
-
-// TODO: use struct as option instead of params
-int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, const std::string &rtmpUrl, float scaledCoeffs, float outFps);
 #endif //YOLO_FASTESTV2_DETECT_H
 
