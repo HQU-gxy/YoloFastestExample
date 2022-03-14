@@ -1,6 +1,7 @@
 #include <csignal>
 #include "include/detect.h"
 #include "include/RecognizeInterface.h"
+#include <future>
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
@@ -75,10 +76,21 @@ int main(int argc, char **argv) {
     YoloApp::IS_CAPTURE_ENABLED = false;
   });
 
-  // TODO: use class based polymorphism but I hate class
   auto recognize = YoloApp::createFile(inputFilePath, redis);
-  recognize->recognize(api, redis, videoOptions);
+  std::thread pushTask([&](){
+    // TODO: use class based polymorphism but I hate class
+    recognize->recognize(api, videoOptions);
+  });
 
+  auto fileType = YoloApp::getFileType(inputFilePath);
+
+//  std::this_thread::sleep_for(std::chrono::millisecods(1000));
+
+  auto writer = recognize->getVideoHandler()->getVideoWriter();
+  pushTask.detach();
+  YoloApp::PullTask pullJob(writer);
+  auto pullRedis = sw::redis::Redis(redisUrl);
+  pullJob.run(videoOptions, pullRedis);
   return YoloApp::Error::SUCCESS;
 }
 

@@ -7,7 +7,7 @@
 
 namespace YoloApp {
 
-  int Video::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) {
+  int Video::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
     }
@@ -25,7 +25,12 @@ namespace YoloApp {
     return YoloApp::Error::SUCCESS;
   }
 
-  int Stream::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) {
+  Stream::Stream(const std::string inputFileName, sw::redis::Redis& redis) : RecognizeInterface(inputFileName, redis){
+    setType("Stream");
+    spdlog::info("Input File is: {}", type);
+  }
+
+  int Stream::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
     auto index = std::stoi(filePath);
     spdlog::info("Streaming from camera {}", index);
     // I don't output the video to file for stream
@@ -43,10 +48,15 @@ namespace YoloApp {
     return YoloApp::Error::SUCCESS;
   }
 
+  // Danger: this function can't be used before call recognize
+  // before which videoHandler is not initialized
+  // TODO: use std::optional
   const std::shared_ptr<YoloApp::VideoHandler> Stream::getVideoHandler() const {
     return videoHandler;
   }
 
+  // Danger: this function can't be used before call recognize
+  // before which videoHandler is not initialized
   const std::shared_ptr<YoloApp::VideoHandler> Video::getVideoHandler() const {
     return videoHandler;
   }

@@ -161,18 +161,18 @@ int VideoHandler::run() {
     auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
     drawTime(cvImgResized);
 
-    if (opts.isRedis){
+    if (opts.isRedis) {
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
       if (success) {
         auto len = redis.llen("image");
-        if (len < 1500){
-          spdlog::debug("Redis List length: {}", len);
-          redis.lpush("image", reinterpret_cast<char*>(buf.data()));
+        if (len < 1500) {
+//          spdlog::debug("Redis List length: {}", len);
+          redis.lpush("image", reinterpret_cast<char *>(buf.data()));
         } else {
           redis.rpop("image");
-          redis.lpush("image", reinterpret_cast<char*>(buf.data()));
+          redis.lpush("image", reinterpret_cast<char *>(buf.data()));
         }
       } else {
         spdlog::error("Failed to encode image");
@@ -194,6 +194,40 @@ int VideoHandler::run() {
   return YoloApp::Error::SUCCESS;
 }
 
+PullTask::PullTask(cv::VideoWriter &writer) : writer{writer} {}
+
+void PullTask::run(VideoOptions opts, sw::redis::Redis &redis) {
+  while (YoloApp::IS_CAPTURE_ENABLED) {
+    auto start = ncnn::get_current_time();
+    //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
+    auto redisMemory = redis.brpop("image", 0)
+        .value_or(std::make_pair("", ""))
+        .second;
+    if (redisMemory.empty()) {
+      continue;
+    }
+    auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
+    auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
+    if (image.empty()) {
+      spdlog::error("Failed to decode image");
+      throw std::runtime_error("Failed to decode image");
+    }
+    writer.write(image);
+    auto end = ncnn::get_current_time();
+    spdlog::info("[Pull]\t{} ms", end - start);
+  }
+}
+
+void PullTask::setVideoWriter(cv::VideoWriter &writer) {
+  PullTask::writer = writer;
+}
+
 const VideoOptions &VideoHandler::getOpts() const {
   return opts;
+}
+
+// I expected to copy
+cv::VideoWriter VideoHandler::getVideoWriter() const {
+  auto temp = video_writer;
+  return temp;
 }

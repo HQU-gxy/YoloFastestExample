@@ -43,10 +43,13 @@ namespace YoloApp {
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
     cv::VideoWriter &video_writer;
+  public:
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::VideoOptions opts;
   public:
+    cv::VideoWriter getVideoWriter() const;
+
     const VideoOptions &getOpts() const;
 
     void setOpts(const YoloApp::VideoOptions &opts);
@@ -60,6 +63,14 @@ namespace YoloApp {
                  const std::vector<const char *> classNames, const YoloApp::VideoOptions opts);
 
     int run();
+  };
+  class PullTask {
+  private:
+    cv::VideoWriter &writer;
+  public:
+    void setVideoWriter(cv::VideoWriter &writer);
+    PullTask(cv::VideoWriter &writer);
+    void run(VideoOptions opts, sw::redis::Redis& redis);
   };
 }
 
