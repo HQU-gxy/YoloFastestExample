@@ -6,11 +6,11 @@
 #include "date.h"
 #include "math.h"
 
-using namespace YOLO;
+using namespace YoloApp;
 
 // a global flag in order to make signal function work
-bool YOLO::IS_CAPTURE_ENABLED = true;
-const std::vector<char const *> YOLO::classNames = {
+bool YoloApp::IS_CAPTURE_ENABLED = true;
+const std::vector<char const *> YoloApp::classNames = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
     "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
     "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
@@ -21,7 +21,7 @@ const std::vector<char const *> YOLO::classNames = {
     "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
     "hair drier", "toothbrush"
 };
-const std::string YOLO::base_pipeline = "appsrc ! "
+const std::string YoloApp::base_pipeline = "appsrc ! "
                                         "videoconvert ! "
                                         "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
                                         "video/x-h264, profile=baseline ! "
@@ -31,8 +31,8 @@ const std::string YOLO::base_pipeline = "appsrc ! "
 // not a pure function, will modify the drawImg
 // @param classNames - the name of the class to be detected (array of strings)
 std::vector<TargetBox>
-YOLO::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
-                  const std::vector<const char *> &classNames) {
+YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
+                     const std::vector<const char *> &classNames) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -71,7 +71,7 @@ auto drawTime(cv::Mat &drawImg) {
               cv::LINE_AA);
 }
 
-auto YOLO::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
+auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
@@ -102,12 +102,12 @@ void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
   original_writer.release();
 }
 
-void VideoHandler::setOpts(const YOLO::VideoOptions &opts) {
+void VideoHandler::setOpts(const YoloApp::VideoOptions &opts) {
   VideoHandler::opts = opts;
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YOLO::VideoOptions opts, const std::string pipeline) {
+VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   const int frame_fps = cap.get(cv::CAP_PROP_FPS);
@@ -121,8 +121,8 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap,
                            YoloFastestV2 &api,
                            cv::VideoWriter &writer,
                            const std::vector<const char *> classNames,
-                           const YOLO::VideoOptions opts) : cap{cap}, api{api}, classNames{classNames}, opts{opts},
-                                                            video_writer{writer} {}
+                           const YoloApp::VideoOptions opts) : cap{cap}, api{api}, classNames{classNames}, opts{opts},
+                                                               video_writer{writer} {}
 
 int VideoHandler::run() {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -139,7 +139,7 @@ int VideoHandler::run() {
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Output video fps: {}", out_framerate);
   spdlog::debug("Original video frame count: {}", frame_count);
-  while (YOLO::IS_CAPTURE_ENABLED) {
+  while (YoloApp::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
     cap >> cvImg;
@@ -171,5 +171,9 @@ int VideoHandler::run() {
       spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
     }
   }
-  return YOLO::Error::SUCCESS;
+  return YoloApp::Error::SUCCESS;
+}
+
+const VideoOptions &VideoHandler::getOpts() const {
+  return opts;
 }

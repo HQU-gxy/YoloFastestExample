@@ -113,7 +113,7 @@ set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_INCLUDE_DIRS src/include)
-set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp)
+set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp src/include/RecognizeInterface.h src/RecognizeInterface.cpp)
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} ${MAIN_INCLUDE_DIRS})
 

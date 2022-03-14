@@ -11,7 +11,7 @@
 
 // Use namespace to avoid conflict with other libraries
 // But define a namespace
-namespace YOLO {
+namespace YoloApp {
   enum Error {
     SUCCESS = 0,
     FAILURE = 1
@@ -26,6 +26,8 @@ namespace YOLO {
     // Maybe I should use the exact coordinate
     float cropCoeffs = 0.1;
     float outFps = 5;
+    bool isRtmp = false;
+    bool isDebug = true;
   };
 
   std::vector<TargetBox>
@@ -34,7 +36,7 @@ namespace YOLO {
   auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
 
   int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                  const YOLO::VideoOptions opts);
+                  const YoloApp::VideoOptions opts);
 
   class VideoHandler {
   private:
@@ -42,20 +44,22 @@ namespace YOLO {
     YoloFastestV2 &api;
     cv::VideoWriter &video_writer;
     const std::vector<const char *> classNames;
-    YOLO::VideoOptions opts;
+    YoloApp::VideoOptions opts;
   public:
-    void setOpts(const YOLO::VideoOptions &opts);
+    const VideoOptions &getOpts() const;
+
+    void setOpts(const YoloApp::VideoOptions &opts);
 
     void setVideoWriter(cv::VideoWriter &writer);
 
     static cv::VideoWriter
-    getInitialVideoWriter(cv::VideoCapture &cap, const YOLO::VideoOptions opts, const std::string pipeline);
+    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline);
 
     VideoHandler(cv::VideoCapture &cap,
                  YoloFastestV2 &api,
                  cv::VideoWriter &writer,
                  const std::vector<const char *> classNames,
-                 const YOLO::VideoOptions opts);
+                 const YoloApp::VideoOptions opts);
 
     int run();
   };
