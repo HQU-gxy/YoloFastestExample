@@ -34,6 +34,8 @@ namespace YoloApp {
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) = 0;
 
+    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) = 0;
+
     // shared_ptr and unique_ptr are designed to pass by value
     virtual const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const = 0;
   };
@@ -49,6 +51,8 @@ namespace YoloApp {
       spdlog::debug("Input File is: {}", type);
     }
 
+    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) override;
+
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
   };
 
@@ -62,6 +66,8 @@ namespace YoloApp {
     Stream(const std::string inputFileName, sw::redis::Redis& redis);
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
+
+    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) override;
 
   };
 

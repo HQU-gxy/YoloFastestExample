@@ -30,6 +30,16 @@ namespace YoloApp {
     spdlog::info("Input File is: {}", type);
   }
 
+  cv::VideoCapture Video::getCap(YoloApp::VideoOptions opts){
+    return cv::VideoCapture(filePath);
+  };
+
+  cv::VideoCapture Stream::getCap(YoloApp::VideoOptions opts){
+    auto index = std::stoi(filePath);
+    // I don't output the video to file for stream
+    return cv::VideoCapture(index);
+  };
+
   int Stream::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
     auto index = std::stoi(filePath);
     spdlog::info("Streaming from camera {}", index);

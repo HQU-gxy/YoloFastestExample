@@ -76,17 +76,17 @@ int main(int argc, char **argv) {
     YoloApp::IS_CAPTURE_ENABLED = false;
   });
 
+
   auto recognize = YoloApp::createFile(inputFilePath, redis);
+  auto caps = recognize->getCap(videoOptions);
+  auto capsProps = YoloApp::VideoHandler::getCapProps(caps);
+  caps.release(); // release the caps to prevent memory leak
+  auto writer = YoloApp::VideoHandler::getInitialVideoWriter(capsProps, videoOptions, YoloApp::base_pipeline + rtmpUrl);
   std::thread pushTask([&](){
     // TODO: use class based polymorphism but I hate class
     recognize->recognize(api, videoOptions);
   });
 
-  auto fileType = YoloApp::getFileType(inputFilePath);
-
-//  std::this_thread::sleep_for(std::chrono::millisecods(1000));
-
-  auto writer = recognize->getVideoHandler()->getVideoWriter();
   pushTask.detach();
   YoloApp::PullTask pullJob(writer);
   auto pullRedis = sw::redis::Redis(redisUrl);

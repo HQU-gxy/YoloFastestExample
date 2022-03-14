@@ -32,6 +32,12 @@ namespace YoloApp {
     bool isRedis = true;
   };
 
+  struct CapProps {
+    const double frame_width;
+    const double frame_height;
+    const double frame_fps;
+  };
+
   std::vector<TargetBox>
   detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
 
@@ -58,6 +64,13 @@ namespace YoloApp {
 
     static cv::VideoWriter
     getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline);
+
+    static cv::VideoWriter
+    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::VideoOptions opts,
+                                        const std::string pipeline);
+
+
+    static YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
                  const std::vector<const char *> classNames, const YoloApp::VideoOptions opts);

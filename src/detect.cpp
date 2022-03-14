@@ -117,6 +117,24 @@ VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoO
                          cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
 
+cv::VideoWriter
+VideoHandler::getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::VideoOptions opts,
+                                    const std::string pipeline) {
+  auto [frame_width, frame_height, frame_fps] = props;
+  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
+  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+}
+
+
+YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
+  return {
+      cap.get(cv::CAP_PROP_FRAME_WIDTH),
+      cap.get(cv::CAP_PROP_FRAME_HEIGHT),
+      cap.get(cv::CAP_PROP_FPS),
+  };
+}
+
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
 VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
                            const std::vector<const char *> classNames, const YoloApp::VideoOptions opts)
@@ -165,6 +183,7 @@ int VideoHandler::run() {
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
+      spdlog::debug("Send Vector Length: {}", buf.size());
       if (success) {
         auto len = redis.llen("image");
         if (len < 1500) {
@@ -207,6 +226,7 @@ void PullTask::run(VideoOptions opts, sw::redis::Redis &redis) {
       continue;
     }
     auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
+    spdlog::debug("Received Vector Length: {}", vector.size());
     auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
     if (image.empty()) {
       spdlog::error("Failed to decode image");
