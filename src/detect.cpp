@@ -137,6 +137,7 @@ int VideoHandler::run() {
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Output video fps: {}", out_framerate);
   spdlog::debug("Original video frame count: {}", frame_count);
+  redis.del("image");
   while (YoloApp::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
@@ -159,7 +160,28 @@ int VideoHandler::run() {
     cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
     auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
     drawTime(cvImgResized);
-    video_writer.write(cvImgResized);
+
+    if (opts.isRedis){
+      // uchar = unsigned char
+      std::vector<uchar> buf;
+      auto success = cv::imencode(".png", cvImgResized, buf);
+      if (success) {
+        auto len = redis.llen("image");
+        if (len < 1500){
+          spdlog::debug("Redis List length: {}", len);
+          redis.lpush("image", reinterpret_cast<char*>(buf.data()));
+        } else {
+          redis.rpop("image");
+          redis.lpush("image", reinterpret_cast<char*>(buf.data()));
+        }
+      } else {
+        spdlog::error("Failed to encode image");
+        throw std::runtime_error("Failed to encode image");
+      }
+    } else {
+      video_writer.write(cvImgResized);
+    }
+
     auto end = ncnn::get_current_time();
 
     real_frame_count++;
