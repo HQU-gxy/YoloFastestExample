@@ -66,14 +66,15 @@ namespace YoloApp {
     return YoloApp::Error::SUCCESS;
   }
 
-  const std::shared_ptr<YoloApp::VideoHandler> &Stream::getVideoHandler() const {
+  const std::shared_ptr<YoloApp::VideoHandler> Stream::getVideoHandler() const {
     return videoHandler;
   }
 
-  const std::shared_ptr<YoloApp::VideoHandler> &Video::getVideoHandler() const {
+  const std::shared_ptr<YoloApp::VideoHandler> Video::getVideoHandler() const {
     return videoHandler;
   }
 
+  // Will throw exception if the file is not a valid file
   std::unique_ptr<RecognizeInterface> createFile(const std::string &path) {
     auto type = getFileType(path);
     if (type == YoloApp::FileType::Image) {

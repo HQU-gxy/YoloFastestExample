@@ -17,9 +17,9 @@ namespace YoloApp {
     Unknown
   };
 
-  FileType getFileType(const std::string &fileName);
-  int getCodec(const std::string &codec);
-  std::string getOutputFileName(const std::string &inputFileName, const std::string postFix = "-out");
+  FileType getFileType(const std::string &fileName) noexcept;
+  int getCodec(const std::string &codec) noexcept;
+  std::string getOutputFileName(const std::string &inputFileName, const std::string postFix = "-out") noexcept;
 }
 
 #endif //YOLO_FASTESTV2_UTILS_H

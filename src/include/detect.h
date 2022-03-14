@@ -38,6 +38,7 @@ namespace YoloApp {
   int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
                   const YoloApp::VideoOptions opts);
 
+  // TODO: disable copy but enable move
   class VideoHandler {
   private:
     cv::VideoCapture &cap;
@@ -46,6 +47,7 @@ namespace YoloApp {
     const std::vector<const char *> classNames;
     YoloApp::VideoOptions opts;
   public:
+    bool isRedis = false;
     const VideoOptions &getOpts() const;
 
     void setOpts(const YoloApp::VideoOptions &opts);

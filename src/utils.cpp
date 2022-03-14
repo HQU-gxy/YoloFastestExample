@@ -5,7 +5,7 @@
 #include "include/utils.h"
 
 namespace YoloApp {
-  FileType getFileType(const std::string &fileName) {
+  FileType getFileType(const std::string &fileName) noexcept {
     std::filesystem::path inputPath(fileName);
     auto inputExtension = inputPath.extension().string();
     // convert to lower case
@@ -41,7 +41,7 @@ namespace YoloApp {
   }
 
 
-  int getCodec(const std::string &codec) {
+  int getCodec(const std::string &codec) noexcept{
     if (codec == "mjpeg") {
       return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
     } else if (codec == "x264") {
@@ -58,7 +58,7 @@ namespace YoloApp {
     }
   }
 
-  std::string getOutputFileName(const std::string &inputFileName, const std::string postFix) {
+  std::string getOutputFileName(const std::string &inputFileName, const std::string postFix) noexcept{
     std::filesystem::path inputPath(inputFileName);
     return inputPath.stem().string() + postFix + inputPath.extension().string();
   }

@@ -11,6 +11,7 @@
 #include "detect.h"
 
 namespace YoloApp {
+  // TODO: disable copy but enable move
   class RecognizeInterface {
   protected:
     std::string type = "Unknown";
@@ -31,7 +32,8 @@ namespace YoloApp {
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) = 0;
 
-    virtual const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const = 0;
+    // shared_ptr and unique_ptr are designed to pass by value
+    virtual const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const = 0;
 
     int run(YoloFastestV2 &api, YoloApp::VideoOptions opts);
   };
@@ -43,7 +45,7 @@ namespace YoloApp {
       spdlog::debug("Input File is: {}", type);
     }
 
-    inline const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const {
+    inline const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const {
       return nullptr;
     };
 
@@ -54,7 +56,7 @@ namespace YoloApp {
   private:
     std::shared_ptr<YoloApp::VideoHandler> videoHandler;
   public:
-    const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const;
+    const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
 
     inline Video(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Video");
@@ -69,7 +71,7 @@ namespace YoloApp {
     std::shared_ptr<YoloApp::VideoHandler> videoHandler;
 
   public:
-    const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const;
+    const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
 
     inline Stream(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Stream");

@@ -1,9 +1,12 @@
 #include <csignal>
 #include "include/detect.h"
 #include "include/RecognizeInterface.h"
+#include <sw/redis++/redis++.h>
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
+
+using namespace sw::redis;
 
 int main(int argc, char **argv) {
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
@@ -13,6 +16,7 @@ int main(int argc, char **argv) {
   std::string paramPath;
   std::string binPath;
   std::string rtmpUrl;
+  std::string redisUrl = "tcp://127.0.0.1:6379";
   float scaledCoeffs = 1.0;
   float thresholdNMS = 0.1;
   float outFps = 0.0;
@@ -26,6 +30,7 @@ int main(int argc, char **argv) {
       CLI::Range(0.0, 0.4));
   app.add_option("--out-fps", outFps, "Manually set output fps")->check(CLI::Range(0.0, 60.0));
   app.add_option("--rtmp", rtmpUrl, "The url of RTMP server. started with 'rtmp://'");
+  app.add_option("--redis", redisUrl, "The url of Redis server. started with 'tcp://'");
   app.add_option("--nms", thresholdNMS, "NMS threshold for video output")->check(CLI::Range(0.0, 1.0));
   // I don't think there is anyone running this application on more than 16 thread
   app.add_option("-j", threadsNum, "Threads number")->check(CLI::Range(1, 16));
@@ -39,6 +44,8 @@ int main(int argc, char **argv) {
   if (isDebug) {
     spdlog::set_level(spdlog::level::debug);
   }
+
+  auto redis = Redis(redisUrl);
 
   YoloFastestV2 api(threadsNum, thresholdNMS);
   YoloApp::VideoOptions videoOptions{
