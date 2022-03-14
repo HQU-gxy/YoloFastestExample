@@ -5,6 +5,7 @@
 #include "include/detect.h"
 #include "date.h"
 #include "math.h"
+#include<vector>
 
 using namespace YoloApp;
 
@@ -183,15 +184,17 @@ int VideoHandler::run() {
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
+
       spdlog::debug("Send Vector Length: {}", buf.size());
       if (success) {
         auto len = redis.llen("image");
         if (len < 1500) {
-//          spdlog::debug("Redis List length: {}", len);
-          redis.lpush("image", reinterpret_cast<char *>(buf.data()));
+          // spdlog::debug("Redis List length: {}", len);
+          // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
+          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
         } else {
           redis.rpop("image");
-          redis.lpush("image", reinterpret_cast<char *>(buf.data()));
+          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
         }
       } else {
         spdlog::error("Failed to encode image");
