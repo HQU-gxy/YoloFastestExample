@@ -7,6 +7,7 @@
 
 #include "yolo-fastestv2.h"
 #include <benchmark.h>
+#include <sw/redis++/redis++.h>
 #include "spdlog/spdlog.h"
 
 // Use namespace to avoid conflict with other libraries
@@ -27,7 +28,8 @@ namespace YoloApp {
     float cropCoeffs = 0.1;
     float outFps = 5;
     bool isRtmp = false;
-    bool isDebug = true;
+    bool isDebug = false;
+    bool isRedis = true;
   };
 
   std::vector<TargetBox>
@@ -35,19 +37,16 @@ namespace YoloApp {
 
   auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
 
-  int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                  const YoloApp::VideoOptions opts);
-
   // TODO: disable copy but enable move
   class VideoHandler {
   private:
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
     cv::VideoWriter &video_writer;
+    sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::VideoOptions opts;
   public:
-    bool isRedis = false;
     const VideoOptions &getOpts() const;
 
     void setOpts(const YoloApp::VideoOptions &opts);
@@ -57,11 +56,8 @@ namespace YoloApp {
     static cv::VideoWriter
     getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline);
 
-    VideoHandler(cv::VideoCapture &cap,
-                 YoloFastestV2 &api,
-                 cv::VideoWriter &writer,
-                 const std::vector<const char *> classNames,
-                 const YoloApp::VideoOptions opts);
+    VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+                 const std::vector<const char *> classNames, const YoloApp::VideoOptions opts);
 
     int run();
   };

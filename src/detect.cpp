@@ -22,11 +22,11 @@ const std::vector<char const *> YoloApp::classNames = {
     "hair drier", "toothbrush"
 };
 const std::string YoloApp::base_pipeline = "appsrc ! "
-                                        "videoconvert ! "
-                                        "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
-                                        "video/x-h264, profile=baseline ! "
-                                        "flvmux ! "
-                                        "rtmpsink location=";
+                                           "videoconvert ! "
+                                           "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
+                                           "video/x-h264, profile=baseline ! "
+                                           "flvmux ! "
+                                           "rtmpsink location=";
 
 // not a pure function, will modify the drawImg
 // @param classNames - the name of the class to be detected (array of strings)
@@ -107,7 +107,8 @@ void VideoHandler::setOpts(const YoloApp::VideoOptions &opts) {
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline) {
+VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts,
+                                    const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   const int frame_fps = cap.get(cv::CAP_PROP_FPS);
@@ -117,12 +118,9 @@ VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoO
 }
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
-VideoHandler::VideoHandler(cv::VideoCapture &cap,
-                           YoloFastestV2 &api,
-                           cv::VideoWriter &writer,
-                           const std::vector<const char *> classNames,
-                           const YoloApp::VideoOptions opts) : cap{cap}, api{api}, classNames{classNames}, opts{opts},
-                                                               video_writer{writer} {}
+VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+                           const std::vector<const char *> classNames, const YoloApp::VideoOptions opts)
+    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts}, video_writer{writer} {}
 
 int VideoHandler::run() {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);

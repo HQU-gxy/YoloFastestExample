@@ -6,12 +6,8 @@
 #include <memory>
 
 namespace YoloApp {
-  int RecognizeInterface::run(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    recognize(api, opts);
-    return 0;
-  }
 
-  int Video::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
+  int Video::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) {
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
     }
@@ -23,14 +19,13 @@ namespace YoloApp {
     auto writer = YoloApp::VideoHandler::getInitialVideoWriter(cap, opts,
                                                                YoloApp::base_pipeline +
                                                                opts.rtmpUrl);
-    YoloApp::VideoHandler handler{cap, api, writer,
-                                  YoloApp::classNames, opts};
+    YoloApp::VideoHandler handler{cap, api, writer, redis, YoloApp::classNames, opts};
     videoHandler = std::make_shared<YoloApp::VideoHandler>(handler);
     handler.run();
     return YoloApp::Error::SUCCESS;
   }
 
-  int Stream::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
+  int Stream::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) {
     auto index = std::stoi(filePath);
     spdlog::info("Streaming from camera {}", index);
     // I don't output the video to file for stream
@@ -42,8 +37,7 @@ namespace YoloApp {
     auto writer = YoloApp::VideoHandler::getInitialVideoWriter(cap, opts,
                                                                YoloApp::base_pipeline +
                                                                opts.rtmpUrl);
-    YoloApp::VideoHandler handler{cap, api, writer,
-                                  YoloApp::classNames, opts};
+    YoloApp::VideoHandler handler{cap, api, writer, redis, YoloApp::classNames, opts};
     videoHandler = std::make_shared<YoloApp::VideoHandler>(handler);
     handler.run();
     return YoloApp::Error::SUCCESS;

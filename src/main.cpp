@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
   float cropCoeffs = 0.1;
   int threadsNum = 4;
   bool isDebug = false;
+  bool isRedis = true;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required();
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
   app.add_option("-b,--bin", binPath, "ncnn network model file (end with .bin)")->required()->check(
       CLI::ExistingFile);
   app.add_flag("-d,--debug", isDebug, "Enable debug log");
+  app.add_flag("--redis-enable", isRedis, "Enable Redis");
   CLI11_PARSE(app, argc, argv)
 
   if (isDebug) {
@@ -55,6 +57,7 @@ int main(int argc, char **argv) {
       .outFps = outFps,
       .isRtmp = !rtmpUrl.empty(),
       .isDebug = isDebug,
+      .isRedis = isRedis
   };
   api.loadModel(paramPath.c_str(), binPath.c_str());
 
@@ -73,8 +76,8 @@ int main(int argc, char **argv) {
   });
 
   // TODO: use class based polymorphism but I hate class
-  auto recognize = YoloApp::createFile(inputFilePath);
-  recognize->run(api, videoOptions);
+  auto recognize = YoloApp::createFile(inputFilePath, redis);
+  recognize->recognize(api, redis, videoOptions);
 
   return YoloApp::Error::SUCCESS;
 }

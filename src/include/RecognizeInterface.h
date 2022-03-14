@@ -32,12 +32,10 @@ namespace YoloApp {
       return type;
     }
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) = 0;
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) = 0;
 
     // shared_ptr and unique_ptr are designed to pass by value
     virtual const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const = 0;
-
-    int run(YoloFastestV2 &api, YoloApp::VideoOptions opts);
   };
 
   class Video : public RecognizeInterface {
@@ -51,7 +49,7 @@ namespace YoloApp {
       spdlog::debug("Input File is: {}", type);
     }
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) override;
   };
 
   class Stream : public RecognizeInterface {
@@ -66,11 +64,11 @@ namespace YoloApp {
       spdlog::info("Input File is: {}", type);
     }
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::VideoOptions opts) override;
 
   };
 
-  std::unique_ptr<RecognizeInterface> createFile(const std::string &path);
+  std::unique_ptr<RecognizeInterface> createFile(const std::string &path, sw::redis::Redis& redis);
 }
 
 
