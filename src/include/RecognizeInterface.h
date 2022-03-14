@@ -12,16 +12,13 @@
 
 namespace YoloApp {
   class RecognizeInterface {
-  private:
-    std::function<void()> beforeRun = []() {};
-    std::function<void()> afterRun = []() {};
-    std::string type = "Unknown";
   protected:
+    std::string type = "Unknown";
     std::string filePath;
 
   public:
     inline RecognizeInterface(std::string filePath) : filePath(filePath) {
-      spdlog::info("Input File Path: {}", filePath);
+      spdlog::debug("Input File Path: {}", filePath);
     }
 
     inline void setType(const std::string &type) {
@@ -30,14 +27,6 @@ namespace YoloApp {
 
     inline const std::string &getType() const {
       return type;
-    }
-
-    inline void setBeforeRunHook(const std::function<void()> &beforeRun) {
-      RecognizeInterface::beforeRun = beforeRun;
-    }
-
-    inline void setAfterRunHook(const std::function<void()> &afterRun) {
-      RecognizeInterface::afterRun = afterRun;
     }
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) = 0;
@@ -51,7 +40,9 @@ namespace YoloApp {
   public:
     inline Image(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Image");
+      spdlog::debug("Input File is: {}", type);
     }
+
     inline const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const {
       return nullptr;
     };
@@ -65,10 +56,9 @@ namespace YoloApp {
   public:
     const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const;
 
-    void setVideoHandler(const std::shared_ptr<YoloApp::VideoHandler> &videoHandler);
-
     inline Video(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Video");
+      spdlog::debug("Input File is: {}", type);
     }
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
@@ -81,10 +71,9 @@ namespace YoloApp {
   public:
     const std::shared_ptr<YoloApp::VideoHandler> &getVideoHandler() const;
 
-    void setVideoHandler(const std::shared_ptr<YoloApp::VideoHandler> &videoHandler);
-
     inline Stream(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Stream");
+      spdlog::info("Input File is: {}", type);
     }
 
     virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;

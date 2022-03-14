@@ -7,14 +7,11 @@
 
 namespace YoloApp {
   int RecognizeInterface::run(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    beforeRun();
     recognize(api, opts);
-    afterRun();
     return 0;
   }
 
   int Image::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    spdlog::info("Input file is image");
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
     }
@@ -32,7 +29,6 @@ namespace YoloApp {
   }
 
   int Video::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    spdlog::info("Input file is video");
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
     }
@@ -46,13 +42,12 @@ namespace YoloApp {
                                                                opts.rtmpUrl);
     YoloApp::VideoHandler handler{cap, api, writer,
                                   YoloApp::classNames, opts};
-    setVideoHandler(std::make_shared<YoloApp::VideoHandler>(handler));
+    videoHandler = std::make_shared<YoloApp::VideoHandler>(handler);
     handler.run();
     return YoloApp::Error::SUCCESS;
   }
 
   int Stream::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    spdlog::info("Input file is Stream");
     auto index = std::stoi(filePath);
     spdlog::info("Streaming from camera {}", index);
     // I don't output the video to file for stream
@@ -66,21 +61,13 @@ namespace YoloApp {
                                                                opts.rtmpUrl);
     YoloApp::VideoHandler handler{cap, api, writer,
                                   YoloApp::classNames, opts};
-    setVideoHandler(std::make_shared<YoloApp::VideoHandler>(handler));
+    videoHandler = std::make_shared<YoloApp::VideoHandler>(handler);
     handler.run();
     return YoloApp::Error::SUCCESS;
   }
 
-  void Stream::setVideoHandler(const std::shared_ptr<YoloApp::VideoHandler> &videoHandler) {
-    Stream::videoHandler = videoHandler;
-  }
-
   const std::shared_ptr<YoloApp::VideoHandler> &Stream::getVideoHandler() const {
     return videoHandler;
-  }
-
-  void Video::setVideoHandler(const std::shared_ptr<YoloApp::VideoHandler> &videoHandler) {
-    Video::videoHandler = videoHandler;
   }
 
   const std::shared_ptr<YoloApp::VideoHandler> &Video::getVideoHandler() const {

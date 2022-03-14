@@ -40,8 +40,6 @@ int main(int argc, char **argv) {
     spdlog::set_level(spdlog::level::debug);
   }
 
-  auto fileType = YoloApp::getFileType(inputFilePath);
-
   YoloFastestV2 api(threadsNum, thresholdNMS);
   YoloApp::VideoOptions videoOptions{
       .outputFileName = outputFileName,
@@ -67,10 +65,11 @@ int main(int argc, char **argv) {
     spdlog::warn("SIGTSTP is received. Stopping capture");
     YoloApp::IS_CAPTURE_ENABLED = false;
   });
+
+  // TODO: use class based polymorphism but I hate class
   auto recognize = YoloApp::createFile(inputFilePath);
   recognize->run(api, videoOptions);
 
-  // TODO: use class based polymorphism but I hate class
   return YoloApp::Error::SUCCESS;
 }
 
