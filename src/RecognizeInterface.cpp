@@ -11,23 +11,6 @@ namespace YoloApp {
     return 0;
   }
 
-  int Image::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
-    if (opts.outputFileName.empty()) {
-      opts.outputFileName = getOutputFileName(filePath);
-    }
-    cv::Mat cvImg = cv::imread(filePath);
-    auto boxes = YoloApp::detectFrame(cvImg, cvImg, api, YoloApp::classNames);
-    if (opts.isDebug) {
-      // spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", "x1", "y1", "x2", "y2", "score", "class");
-      for (TargetBox box: boxes) {
-        spdlog::debug("{}\t{}\t{}\t{}\t{}\t{}", box.x1, box.y1, box.x2, box.y2, box.score,
-                      YoloApp::classNames[box.cate]);
-      }
-    }
-    cv::imwrite(opts.outputFileName, cvImg);
-    return YoloApp::Error::SUCCESS;
-  }
-
   int Video::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
@@ -75,14 +58,12 @@ namespace YoloApp {
   }
 
   // Will throw exception if the file is not a valid file
-  std::unique_ptr<RecognizeInterface> createFile(const std::string &path) {
+  std::unique_ptr<RecognizeInterface> createFile(const std::string &path, sw::redis::Redis& redis) {
     auto type = getFileType(path);
-    if (type == YoloApp::FileType::Image) {
-      return std::make_unique<Image>(path);
-    } else if (type == YoloApp::FileType::Video) {
-      return std::make_unique<Video>(path);
+    if (type == YoloApp::FileType::Video) {
+      return std::make_unique<Video>(path, redis);
     } else if (type == YoloApp::FileType::Stream) {
-      return std::make_unique<Stream>(path);
+      return std::make_unique<Stream>(path, redis);
     } else {
       throw std::runtime_error("Unknown file type");
     }

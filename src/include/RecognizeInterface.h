@@ -6,6 +6,7 @@
 #define YOLO_FASTESTV2_RECOGNIZEINTERFACE_H
 
 #include <functional>
+#include <sw/redis++/redis++.h>
 #include <string>
 #include "utils.h"
 #include "detect.h"
@@ -14,11 +15,12 @@ namespace YoloApp {
   // TODO: disable copy but enable move
   class RecognizeInterface {
   protected:
+    sw::redis::Redis& redis;
     std::string type = "Unknown";
     std::string filePath;
 
   public:
-    inline RecognizeInterface(std::string filePath) : filePath(filePath) {
+    inline RecognizeInterface(std::string filePath, sw::redis::Redis& redis) : filePath(filePath), redis{redis} {
       spdlog::debug("Input File Path: {}", filePath);
     }
 
@@ -38,27 +40,13 @@ namespace YoloApp {
     int run(YoloFastestV2 &api, YoloApp::VideoOptions opts);
   };
 
-  class Image : public RecognizeInterface {
-  public:
-    inline Image(const std::string inputFileName) : RecognizeInterface(inputFileName) {
-      setType("Image");
-      spdlog::debug("Input File is: {}", type);
-    }
-
-    inline const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const {
-      return nullptr;
-    };
-
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
-  };
-
   class Video : public RecognizeInterface {
   private:
     std::shared_ptr<YoloApp::VideoHandler> videoHandler;
   public:
     const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
 
-    inline Video(const std::string inputFileName) : RecognizeInterface(inputFileName) {
+    inline Video(const std::string inputFileName, sw::redis::Redis& redis) : RecognizeInterface(inputFileName, redis) {
       setType("Video");
       spdlog::debug("Input File is: {}", type);
     }
@@ -73,7 +61,7 @@ namespace YoloApp {
   public:
     const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
 
-    inline Stream(const std::string inputFileName) : RecognizeInterface(inputFileName) {
+    inline Stream(const std::string inputFileName, sw::redis::Redis& redis) : RecognizeInterface(inputFileName, redis) {
       setType("Stream");
       spdlog::info("Input File is: {}", type);
     }

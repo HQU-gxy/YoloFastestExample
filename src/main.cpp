@@ -1,7 +1,6 @@
 #include <csignal>
 #include "include/detect.h"
 #include "include/RecognizeInterface.h"
-#include <sw/redis++/redis++.h>
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
