@@ -1,6 +1,6 @@
 #include <csignal>
 #include "include/detect.h"
-#include "include/RecognizeInterface.h"
+#include "include/VideoInterface.h"
 #include <future>
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
