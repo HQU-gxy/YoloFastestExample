@@ -8,9 +8,6 @@
 namespace YoloApp {
 
   int VideoInterface::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
-    if (opts.outputFileName.empty()) {
-      opts.outputFileName = getOutputFileName(filePath);
-    }
     auto writer = YoloApp::VideoHandler::getInitialVideoWriter(cap, opts,
                                                                YoloApp::base_pipeline +
                                                                opts.rtmpUrl);

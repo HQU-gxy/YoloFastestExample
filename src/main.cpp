@@ -76,7 +76,6 @@ int main(int argc, char **argv) {
     YoloApp::IS_CAPTURE_ENABLED = false;
   });
 
-
   // TODO: try to handle image. Just call the YoloApp::detectFrame()
   auto recognize = YoloApp::createFile(inputFilePath);
   auto capsProps = recognize->getCapProps();

@@ -38,10 +38,11 @@ namespace YoloApp {
     }
 
     inline CapProps getCapProps() {
-      return  YoloApp::VideoHandler::getCapProps(cap);
+      return YoloApp::VideoHandler::getCapProps(cap);
     }
 
-    inline std::shared_ptr<YoloApp::VideoHandler> initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter& writer, Options opts) {
+    inline std::shared_ptr<YoloApp::VideoHandler>
+    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts) {
       if (!cap.isOpened()) {
         spdlog::error("Cannot open video file");
         throw std::runtime_error("Cannot open video file");
@@ -64,6 +65,7 @@ namespace YoloApp {
     int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts);
   };
 
+  // TODO: handle output file name differently
   class Video : public VideoInterface {
   public:
     inline Video(const std::string inputFileName) : VideoInterface(inputFileName) {
