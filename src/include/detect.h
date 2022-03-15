@@ -20,7 +20,7 @@ namespace YoloApp {
   extern bool IS_CAPTURE_ENABLED;
   extern const std::vector<char const *> classNames;
   extern const std::string base_pipeline;
-  struct VideoOptions {
+  struct Options {
     std::string outputFileName;
     std::string rtmpUrl;
     float scaledCoeffs = 1.0;
@@ -52,28 +52,28 @@ namespace YoloApp {
   public:
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
-    YoloApp::VideoOptions opts;
+    YoloApp::Options opts;
   public:
     cv::VideoWriter getVideoWriter() const;
 
-    const VideoOptions &getOpts() const;
+    const Options &getOpts() const;
 
-    void setOpts(const YoloApp::VideoOptions &opts);
+    void setOpts(const YoloApp::Options &opts);
 
     void setVideoWriter(cv::VideoWriter &writer);
 
     static cv::VideoWriter
-    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts, const std::string pipeline);
+    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
 
     static cv::VideoWriter
-    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::VideoOptions opts,
+    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
                                         const std::string pipeline);
 
 
     static YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
-                 const std::vector<const char *> classNames, const YoloApp::VideoOptions opts);
+                 const std::vector<const char *> classNames, const YoloApp::Options opts);
 
     int run();
   };
@@ -83,7 +83,7 @@ namespace YoloApp {
   public:
     void setVideoWriter(cv::VideoWriter &writer);
     PullTask(cv::VideoWriter &writer);
-    void run(VideoOptions opts, sw::redis::Redis& redis);
+    void run(Options opts, sw::redis::Redis& redis);
   };
 }
 

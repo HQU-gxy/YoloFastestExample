@@ -15,63 +15,72 @@ namespace YoloApp {
   // TODO: disable copy but enable move
   class RecognizeInterface {
   protected:
-    sw::redis::Redis& redis;
     std::string type = "Unknown";
     std::string filePath;
-
-  public:
-    inline RecognizeInterface(std::string filePath, sw::redis::Redis& redis) : filePath(filePath), redis{redis} {
-      spdlog::debug("Input File Path: {}", filePath);
-    }
+    std::shared_ptr<YoloApp::VideoHandler> videoHandler = nullptr;
 
     inline void setType(const std::string &type) {
       RecognizeInterface::type = type;
+    }
+
+  public:
+    inline RecognizeInterface(std::string filePath) : filePath(filePath) {
+      spdlog::debug("Input File Path: {}", filePath);
     }
 
     inline const std::string &getType() const {
       return type;
     }
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) = 0;
-
-    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) = 0;
+    inline CapProps getCapProps(Options opts) {
+      auto caps = this->getCap(opts);
+      auto capsProps = YoloApp::VideoHandler::getCapProps(caps);
+      caps.release(); // release the caps to prevent memory leak
+      return capsProps;
+    }
 
     // shared_ptr and unique_ptr are designed to pass by value
-    virtual const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const = 0;
+    //! Danger this function can't be used before call recognize
+    //! before which videoHandler is not initialized
+    inline const std::optional<std::shared_ptr<YoloApp::VideoHandler>> getVideoHandler() const {
+      if (videoHandler) {
+        return videoHandler;
+      } else {
+        return std::nullopt;
+      }
+    }
+
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) = 0;
+
+    virtual cv::VideoCapture getCap(YoloApp::Options opts) = 0;
   };
 
   class Video : public RecognizeInterface {
-  private:
-    std::shared_ptr<YoloApp::VideoHandler> videoHandler;
   public:
-    const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
-
-    inline Video(const std::string inputFileName, sw::redis::Redis& redis) : RecognizeInterface(inputFileName, redis) {
+    inline Video(const std::string inputFileName) : RecognizeInterface(inputFileName) {
       setType("Video");
       spdlog::debug("Input File is: {}", type);
     }
 
-    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) override;
+    virtual cv::VideoCapture getCap(YoloApp::Options opts) override;
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) override;
   };
 
   class Stream : public RecognizeInterface {
-  private:
-    std::shared_ptr<YoloApp::VideoHandler> videoHandler;
-
   public:
-    const std::shared_ptr<YoloApp::VideoHandler> getVideoHandler() const;
+    inline Stream(const std::string inputFileName) : RecognizeInterface(inputFileName) {
+      setType("Stream");
+      spdlog::info("Input File is: {}", type);
+    }
 
-    Stream(const std::string inputFileName, sw::redis::Redis& redis);
+    virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) override;
 
-    virtual int recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) override;
-
-    virtual cv::VideoCapture getCap(YoloApp::VideoOptions opts) override;
+    virtual cv::VideoCapture getCap(YoloApp::Options opts) override;
 
   };
 
-  std::unique_ptr<RecognizeInterface> createFile(const std::string &path, sw::redis::Redis& redis);
+  std::unique_ptr<RecognizeInterface> createFile(const std::string &path);
 }
 
 

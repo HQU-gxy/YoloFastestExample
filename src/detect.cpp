@@ -4,7 +4,7 @@
 
 #include "include/detect.h"
 #include "date.h"
-#include "math.h"
+#include <cmath>
 #include<vector>
 
 using namespace YoloApp;
@@ -68,7 +68,7 @@ auto drawTime(cv::Mat &drawImg) {
   // add current time
   auto now = std::chrono::system_clock::now();
   auto formatted = date::format("%Y-%m-%d %H:%M:%S", now);
-  cv::putText(drawImg, formatted.c_str(), cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1,
+  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1,
               cv::LINE_AA);
 }
 
@@ -103,12 +103,12 @@ void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
   original_writer.release();
 }
 
-void VideoHandler::setOpts(const YoloApp::VideoOptions &opts) {
+void VideoHandler::setOpts(const YoloApp::Options &opts) {
   VideoHandler::opts = opts;
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoOptions opts,
+VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
                                     const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
@@ -119,7 +119,7 @@ VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::VideoO
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::VideoOptions opts,
+VideoHandler::getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
                                     const std::string pipeline) {
   auto [frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
@@ -138,7 +138,7 @@ YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
 VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
-                           const std::vector<const char *> classNames, const YoloApp::VideoOptions opts)
+                           const std::vector<const char *> classNames, const YoloApp::Options opts)
     : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts}, video_writer{writer} {}
 
 int VideoHandler::run() {
@@ -185,9 +185,11 @@ int VideoHandler::run() {
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
 
-      spdlog::debug("Send Vector Length: {}", buf.size());
+      // spdlog::debug("Send Vector Length: {}", buf.size());
       if (success) {
         auto len = redis.llen("image");
+        // 1500 is the max length of the queue
+        // I shouldn't use magic number
         if (len < 1500) {
           // spdlog::debug("Redis List length: {}", len);
           // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
@@ -218,10 +220,12 @@ int VideoHandler::run() {
 
 PullTask::PullTask(cv::VideoWriter &writer) : writer{writer} {}
 
-void PullTask::run(VideoOptions opts, sw::redis::Redis &redis) {
+void PullTask::run(Options opts, sw::redis::Redis &redis) {
   while (YoloApp::IS_CAPTURE_ENABLED) {
-    auto start = ncnn::get_current_time();
     //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
+    /// It's wasteful to copy the data, but it's the only way to get the data
+    /// without causing problems.
+    /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
     auto redisMemory = redis.brpop("image", 0)
         .value_or(std::make_pair("", ""))
         .second;
@@ -229,7 +233,8 @@ void PullTask::run(VideoOptions opts, sw::redis::Redis &redis) {
       continue;
     }
     auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
-    spdlog::debug("Received Vector Length: {}", vector.size());
+    // spdlog::debug("Received Vector Length: {}", vector.size());
+    auto start = ncnn::get_current_time();
     auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
     if (image.empty()) {
       spdlog::error("Failed to decode image");
@@ -237,15 +242,17 @@ void PullTask::run(VideoOptions opts, sw::redis::Redis &redis) {
     }
     writer.write(image);
     auto end = ncnn::get_current_time();
-    spdlog::info("[Pull]\t{} ms", end - start);
+    spdlog::debug("[Pull]\t{} ms", end - start);
   }
 }
 
 void PullTask::setVideoWriter(cv::VideoWriter &writer) {
-  PullTask::writer = writer;
+  auto original_writer = this->writer;
+  this->writer = writer;
+  original_writer.release();
 }
 
-const VideoOptions &VideoHandler::getOpts() const {
+const Options &VideoHandler::getOpts() const {
   return opts;
 }
 

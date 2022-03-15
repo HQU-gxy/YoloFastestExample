@@ -7,7 +7,18 @@
 
 namespace YoloApp {
 
-  int Video::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
+
+  cv::VideoCapture Video::getCap(YoloApp::Options opts){
+    return cv::VideoCapture(filePath);
+  };
+
+  cv::VideoCapture Stream::getCap(YoloApp::Options opts){
+    auto index = std::stoi(filePath);
+    // I don't output the video to file for stream
+    return cv::VideoCapture(index);
+  };
+
+  int Video::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
     if (opts.outputFileName.empty()) {
       opts.outputFileName = getOutputFileName(filePath);
     }
@@ -25,22 +36,7 @@ namespace YoloApp {
     return YoloApp::Error::SUCCESS;
   }
 
-  Stream::Stream(const std::string inputFileName, sw::redis::Redis& redis) : RecognizeInterface(inputFileName, redis){
-    setType("Stream");
-    spdlog::info("Input File is: {}", type);
-  }
-
-  cv::VideoCapture Video::getCap(YoloApp::VideoOptions opts){
-    return cv::VideoCapture(filePath);
-  };
-
-  cv::VideoCapture Stream::getCap(YoloApp::VideoOptions opts){
-    auto index = std::stoi(filePath);
-    // I don't output the video to file for stream
-    return cv::VideoCapture(index);
-  };
-
-  int Stream::recognize(YoloFastestV2 &api, YoloApp::VideoOptions opts) {
+  int Stream::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
     auto index = std::stoi(filePath);
     spdlog::info("Streaming from camera {}", index);
     // I don't output the video to file for stream
@@ -58,26 +54,14 @@ namespace YoloApp {
     return YoloApp::Error::SUCCESS;
   }
 
-  // Danger: this function can't be used before call recognize
-  // before which videoHandler is not initialized
-  // TODO: use std::optional
-  const std::shared_ptr<YoloApp::VideoHandler> Stream::getVideoHandler() const {
-    return videoHandler;
-  }
-
-  // Danger: this function can't be used before call recognize
-  // before which videoHandler is not initialized
-  const std::shared_ptr<YoloApp::VideoHandler> Video::getVideoHandler() const {
-    return videoHandler;
-  }
-
-  // Will throw exception if the file is not a valid file
-  std::unique_ptr<RecognizeInterface> createFile(const std::string &path, sw::redis::Redis& redis) {
+  //! Will throw exception if the file is not a valid file
+  // TODO: use optional
+  std::unique_ptr<RecognizeInterface> createFile(const std::string &path) {
     auto type = getFileType(path);
     if (type == YoloApp::FileType::Video) {
-      return std::make_unique<Video>(path, redis);
+      return std::make_unique<Video>(path);
     } else if (type == YoloApp::FileType::Stream) {
-      return std::make_unique<Stream>(path, redis);
+      return std::make_unique<Stream>(path);
     } else {
       throw std::runtime_error("Unknown file type");
     }

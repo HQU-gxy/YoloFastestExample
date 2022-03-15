@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   auto redis = Redis(redisUrl);
 
   YoloFastestV2 api(threadsNum, thresholdNMS);
-  YoloApp::VideoOptions videoOptions{
+  YoloApp::Options opts{
       .outputFileName = outputFileName,
       .rtmpUrl = rtmpUrl,
       .scaledCoeffs = scaledCoeffs,
@@ -77,20 +77,18 @@ int main(int argc, char **argv) {
   });
 
 
-  auto recognize = YoloApp::createFile(inputFilePath, redis);
-  auto caps = recognize->getCap(videoOptions);
-  auto capsProps = YoloApp::VideoHandler::getCapProps(caps);
-  caps.release(); // release the caps to prevent memory leak
-  auto writer = YoloApp::VideoHandler::getInitialVideoWriter(capsProps, videoOptions, YoloApp::base_pipeline + rtmpUrl);
-  std::thread pushTask([&](){
-    // TODO: use class based polymorphism but I hate class
-    recognize->recognize(api, videoOptions);
+  // TODO: try to handle image. Just call the YoloApp::detectFrame()
+  auto recognize = YoloApp::createFile(inputFilePath);
+  auto capsProps = recognize->getCapProps(opts);
+  auto writer = YoloApp::VideoHandler::getInitialVideoWriter(capsProps, opts, YoloApp::base_pipeline + rtmpUrl);
+  std::thread pushTask([&]() {
+    recognize->recognize(api, redis, opts);
   });
 
   pushTask.detach();
   YoloApp::PullTask pullJob(writer);
   auto pullRedis = sw::redis::Redis(redisUrl);
-  pullJob.run(videoOptions, pullRedis);
+  pullJob.run(opts, pullRedis);
   return YoloApp::Error::SUCCESS;
 }
 
