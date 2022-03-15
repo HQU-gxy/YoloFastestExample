@@ -9,7 +9,7 @@
 
 using namespace YoloApp;
 
-// a global flag in order to make signal function work
+/// a global flag in order to make signal function work
 bool YoloApp::IS_CAPTURE_ENABLED = true;
 const std::vector<char const *> YoloApp::classNames = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -29,8 +29,8 @@ const std::string YoloApp::base_pipeline = "appsrc ! "
                                            "flvmux ! "
                                            "rtmpsink location=";
 
-// not a pure function, will modify the drawImg
-// @param classNames - the name of the class to be detected (array of strings)
+/// not a pure function, will modify the drawImg
+/// @param classNames  the name of the class to be detected (array of strings)
 std::vector<TargetBox>
 YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
                      const std::vector<const char *> &classNames) {

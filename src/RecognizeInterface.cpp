@@ -8,11 +8,11 @@
 namespace YoloApp {
 
 
-  cv::VideoCapture Video::getCap(YoloApp::Options opts){
+  cv::VideoCapture Video::getCap() {
     return cv::VideoCapture(filePath);
   };
 
-  cv::VideoCapture Stream::getCap(YoloApp::Options opts){
+  cv::VideoCapture Stream::getCap() {
     auto index = std::stoi(filePath);
     // I don't output the video to file for stream
     return cv::VideoCapture(index);

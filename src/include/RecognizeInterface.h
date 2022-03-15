@@ -32,8 +32,8 @@ namespace YoloApp {
       return type;
     }
 
-    inline CapProps getCapProps(Options opts) {
-      auto caps = this->getCap(opts);
+    inline CapProps getCapProps() {
+      auto caps = this->getCap();
       auto capsProps = YoloApp::VideoHandler::getCapProps(caps);
       caps.release(); // release the caps to prevent memory leak
       return capsProps;
@@ -52,7 +52,7 @@ namespace YoloApp {
 
     virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) = 0;
 
-    virtual cv::VideoCapture getCap(YoloApp::Options opts) = 0;
+    virtual cv::VideoCapture getCap() = 0;
   };
 
   class Video : public RecognizeInterface {
@@ -62,7 +62,7 @@ namespace YoloApp {
       spdlog::debug("Input File is: {}", type);
     }
 
-    virtual cv::VideoCapture getCap(YoloApp::Options opts) override;
+    virtual cv::VideoCapture getCap() override;
 
     virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) override;
   };
@@ -76,7 +76,7 @@ namespace YoloApp {
 
     virtual int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) override;
 
-    virtual cv::VideoCapture getCap(YoloApp::Options opts) override;
+    virtual cv::VideoCapture getCap() override;
 
   };
 

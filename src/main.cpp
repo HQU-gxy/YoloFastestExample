@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
   // TODO: try to handle image. Just call the YoloApp::detectFrame()
   auto recognize = YoloApp::createFile(inputFilePath);
-  auto capsProps = recognize->getCapProps(opts);
+  auto capsProps = recognize->getCapProps();
   auto writer = YoloApp::VideoHandler::getInitialVideoWriter(capsProps, opts, YoloApp::base_pipeline + rtmpUrl);
   std::thread pushTask([&]() {
     recognize->recognize(api, redis, opts);
