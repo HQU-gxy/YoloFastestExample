@@ -3,4 +3,5 @@ cmake-build-debug
 *.log
 output.png
 Yolo-Fastestv2
+Yolo-FastestV2
 build*

@@ -7,14 +7,86 @@
 
 #include "yolo-fastestv2.h"
 #include <benchmark.h>
+#include <sw/redis++/redis++.h>
 #include "spdlog/spdlog.h"
 
-extern bool IS_CAPTURE_ENABLED;
+// Use namespace to avoid conflict with other libraries
+// But define a namespace
+namespace YoloApp {
+  enum Error {
+    SUCCESS = 0,
+    FAILURE = 1
+  };
+  extern bool IS_CAPTURE_ENABLED;
+  extern const std::vector<char const *> classNames;
+  extern const std::string base_pipeline;
+  struct Options {
+    std::string outputFileName;
+    std::string rtmpUrl;
+    float scaledCoeffs = 1.0;
+    // Maybe I should use the exact coordinate
+    float cropCoeffs = 0.1;
+    float outFps = 5;
+    bool isRtmp = false;
+    bool isDebug = false;
+    bool isRedis = true;
+  };
 
-std::vector<TargetBox> detectFrame(cv::Mat &cvImg, YoloFastestV2 &api, const std::vector<char const *> &classNames);
+  struct CapProps {
+    const double frame_width;
+    const double frame_height;
+    const double frame_fps;
+  };
 
-// TODO: use struct as option instead of params
-int handleVideo(cv::VideoCapture &cap, YoloFastestV2 &api, const std::vector<const char *> &classNames,
-                const std::string &outputFileName, int codec, float scaledCoeffs, float outFps);
+  std::vector<TargetBox>
+  detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
+
+  auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
+
+  // TODO: disable copy but enable move
+  class VideoHandler {
+  private:
+    cv::VideoCapture &cap;
+    YoloFastestV2 &api;
+    cv::VideoWriter &video_writer;
+  public:
+    sw::redis::Redis &redis;
+    const std::vector<const char *> classNames;
+    YoloApp::Options opts;
+  public:
+    cv::VideoWriter getVideoWriter() const;
+
+    const Options &getOpts() const;
+
+    void setOpts(const YoloApp::Options &opts);
+
+    void setVideoWriter(cv::VideoWriter &writer);
+
+    static cv::VideoWriter
+    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
+
+    static cv::VideoWriter
+    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+                                        const std::string pipeline);
+
+
+    static YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
+
+    VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+                 const std::vector<const char *> classNames, const YoloApp::Options opts);
+
+    int run();
+  };
+  class PullTask {
+  private:
+    cv::VideoWriter &writer;
+  public:
+    void setVideoWriter(cv::VideoWriter &writer);
+    PullTask(cv::VideoWriter &writer);
+    void run(Options opts, sw::redis::Redis& redis);
+  };
+}
+
+
 #endif //YOLO_FASTESTV2_DETECT_H
 
