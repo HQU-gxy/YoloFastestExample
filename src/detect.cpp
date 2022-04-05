@@ -156,7 +156,7 @@ int VideoHandler::run() {
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Output video fps: {}", out_framerate);
   spdlog::debug("Original video frame count: {}", frame_count);
-  redis.del("image");
+  redis.del("image"); // TODO: why the key of redis is hardcoded
   while (YoloApp::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
@@ -226,7 +226,7 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
     /// It's wasteful to copy the data, but it's the only way to get the data
     /// without causing problems.
     /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-    auto redisMemory = redis.brpop("image", 0)
+    auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
         .value_or(std::make_pair("", ""))
         .second;
     if (redisMemory.empty()) {

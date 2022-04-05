@@ -55,11 +55,7 @@ namespace YoloApp {
     //! Danger this function can't be used before call recognize
     //! before which videoHandler is not initialized
     inline const std::optional<std::shared_ptr<YoloApp::VideoHandler>> getVideoHandler() const {
-      if (videoHandler) {
-        return videoHandler;
-      } else {
-        return std::nullopt;
-      }
+      return (videoHandler != nullptr) ? std::optional(videoHandler) : std::nullopt;
     }
 
     int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts);
