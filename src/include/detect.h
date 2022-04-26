@@ -27,7 +27,6 @@ namespace YoloApp {
     // Maybe I should use the exact coordinate
     float cropCoeffs = 0.1;
     float outFps = 5;
-    bool isRtmp = false;
     bool isDebug = false;
   };
 

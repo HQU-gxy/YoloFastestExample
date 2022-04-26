@@ -79,7 +79,7 @@ set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_INCLUDE_DIRS src/include)
-set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp src/include/VideoInterface.h src/VideoInterface.cpp)
+set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp src/include/VideoInterface.h src/VideoInterface.cpp src/MainWrapper.cpp src/include/MainWrapper.h)
 
 # The named <target> must have been created by a command such as add_executable()
 # or add_library() and must not be an ALIAS target.

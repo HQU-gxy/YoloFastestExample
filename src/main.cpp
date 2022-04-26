@@ -55,7 +55,6 @@ int main(int argc, char **argv) {
       .scaledCoeffs = scaledCoeffs,
       .cropCoeffs = cropCoeffs,
       .outFps = outFps,
-      .isRtmp = !rtmpUrl.empty(),
       .isDebug = isDebug,
   };
   api.loadModel(paramPath.c_str(), binPath.c_str());
