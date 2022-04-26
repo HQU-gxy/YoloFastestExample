@@ -24,6 +24,9 @@ namespace YoloApp {
       VideoInterface::type = type;
     }
 
+    std::shared_ptr<VideoHandler>
+    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts);
+
   public:
     inline VideoInterface(std::string filePath) : filePath(filePath) {
       spdlog::debug("Input File Path: {}", filePath);
@@ -39,16 +42,6 @@ namespace YoloApp {
 
     inline CapProps getCapProps() {
       return YoloApp::VideoHandler::getCapProps(cap);
-    }
-
-    inline std::shared_ptr<YoloApp::VideoHandler>
-    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts) {
-      if (!cap.isOpened()) {
-        spdlog::error("Cannot open video file");
-        throw std::runtime_error("Cannot open video file");
-      }
-      videoHandler = std::make_shared<VideoHandler>(cap, api, writer, redis, YoloApp::classNames, opts);
-      return videoHandler;
     }
 
     // shared_ptr and unique_ptr are designed to pass by value
@@ -73,16 +66,15 @@ namespace YoloApp {
 
   class Stream : public VideoInterface {
   public:
-    inline Stream(const std::string inputFileName) : VideoInterface(inputFileName) {
+    inline Stream(const int index) : VideoInterface(std::to_string(index)) {
       setType("Stream");
-      auto index = std::stoi(filePath);
       spdlog::info("Streaming from camera {}", index);
       // I don't output the video to file for stream
       this->cap = cv::VideoCapture(index);
     }
   };
 
-  std::unique_ptr<VideoInterface> createFile(const std::string &path);
+  std::optional<std::unique_ptr<VideoInterface>> createFile(const std::string &path);
 }
 
 

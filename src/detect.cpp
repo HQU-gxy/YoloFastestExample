@@ -97,6 +97,11 @@ auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect
   }
 }
 
+void VideoHandler::setVideoWriter(const std::string &pipeline){
+  auto videoWriter = VideoHandler::newVideoWriter(this->cap, this->opts,pipeline);
+  this->setVideoWriter(videoWriter);
+}
+
 void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
   auto original_writer = this->video_writer;
   this->video_writer = writer;
@@ -108,8 +113,8 @@ void VideoHandler::setOpts(const YoloApp::Options &opts) {
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
-                                    const std::string pipeline) {
+VideoHandler::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
+                             const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   const int frame_fps = cap.get(cv::CAP_PROP_FPS);
@@ -119,14 +124,13 @@ VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Option
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                                    const std::string pipeline) {
+VideoHandler::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+                             const std::string pipeline) {
   auto [frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
   return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
                          cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
-
 
 YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
   return {
@@ -180,7 +184,8 @@ int VideoHandler::run() {
     auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
     drawTime(cvImgResized);
 
-    if (opts.isRedis) {
+
+    if (this->isWriteRedis){
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
@@ -202,7 +207,11 @@ int VideoHandler::run() {
         spdlog::error("Failed to encode image");
         throw std::runtime_error("Failed to encode image");
       }
-    } else {
+    }
+
+    // Usually this should not be true
+    // unless realtime streaming is enabled
+    if (this->isWriteVideoWriter) {
       video_writer.write(cvImgResized);
     }
 
@@ -222,27 +231,29 @@ PullTask::PullTask(cv::VideoWriter &writer) : writer{writer} {}
 
 void PullTask::run(Options opts, sw::redis::Redis &redis) {
   while (YoloApp::IS_CAPTURE_ENABLED) {
-    //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
-    /// It's wasteful to copy the data, but it's the only way to get the data
-    /// without causing problems.
-    /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-    auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
-        .value_or(std::make_pair("", ""))
-        .second;
-    if (redisMemory.empty()) {
-      continue;
+    if (this->isReadRedis){
+      //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
+      /// It's wasteful to copy the data, but it's the only way to get the data
+      /// without causing problems.
+      /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
+      auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
+          .value_or(std::make_pair("", ""))
+          .second;
+      if (redisMemory.empty()) {
+        continue;
+      }
+      auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
+      // spdlog::debug("Received Vector Length: {}", vector.size());
+      auto start = ncnn::get_current_time();
+      auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
+      if (image.empty()) {
+        spdlog::error("Failed to decode image");
+        throw std::runtime_error("Failed to decode image");
+      }
+      writer.write(image);
+      auto end = ncnn::get_current_time();
+      spdlog::debug("[Pull]\t{} ms", end - start);
     }
-    auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
-    // spdlog::debug("Received Vector Length: {}", vector.size());
-    auto start = ncnn::get_current_time();
-    auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
-    if (image.empty()) {
-      spdlog::error("Failed to decode image");
-      throw std::runtime_error("Failed to decode image");
-    }
-    writer.write(image);
-    auto end = ncnn::get_current_time();
-    spdlog::debug("[Pull]\t{} ms", end - start);
   }
 }
 

@@ -29,7 +29,6 @@ namespace YoloApp {
     float outFps = 5;
     bool isRtmp = false;
     bool isDebug = false;
-    bool isRedis = true;
   };
 
   struct CapProps {
@@ -53,6 +52,8 @@ namespace YoloApp {
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
+    bool isWriteRedis = true;
+    bool isWriteVideoWriter = false;
   public:
     cv::VideoWriter getVideoWriter() const;
 
@@ -63,11 +64,11 @@ namespace YoloApp {
     void setVideoWriter(cv::VideoWriter &writer);
 
     static cv::VideoWriter
-    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
+    newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
 
     static cv::VideoWriter
-    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                                        const std::string pipeline);
+    newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+                   const std::string pipeline);
 
 
     static YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
@@ -76,11 +77,14 @@ namespace YoloApp {
                  const std::vector<const char *> classNames, const YoloApp::Options opts);
 
     int run();
+
+    void setVideoWriter(const std::string &pipeline);
   };
   class PullTask {
   private:
     cv::VideoWriter &writer;
   public:
+    bool isReadRedis = true;
     void setVideoWriter(cv::VideoWriter &writer);
     PullTask(cv::VideoWriter &writer);
     void run(Options opts, sw::redis::Redis& redis);

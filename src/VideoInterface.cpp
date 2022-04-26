@@ -8,23 +8,35 @@
 namespace YoloApp {
 
   int VideoInterface::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
-    auto writer = YoloApp::VideoHandler::getInitialVideoWriter(cap, opts,
-                                                               YoloApp::base_pipeline +
-                                                               opts.rtmpUrl);
+    auto writer = YoloApp::VideoHandler::newVideoWriter(cap, opts,
+                                                        YoloApp::base_pipeline +
+                                                        opts.rtmpUrl);
     this->initializeVideoHandler(api, redis, writer, opts)->run();
     return YoloApp::Error::SUCCESS;
   }
 
-  //! Will throw exception if the file is not a valid file
-  // TODO: use optional
-  std::unique_ptr<VideoInterface> createFile(const std::string &path) {
+  std::optional<std::unique_ptr<VideoInterface>>
+  createFile(const std::string &path) {
     auto type = getFileType(path);
     if (type == YoloApp::FileType::Video) {
-      return std::make_unique<Video>(path);
+      return std::optional(std::make_unique<Video>(path));
     } else if (type == YoloApp::FileType::Stream) {
-      return std::make_unique<Stream>(path);
+      auto index = std::stoi(path);
+      return std::optional(std::make_unique<Stream>(index));
     } else {
-      throw std::runtime_error("Unknown file type");
+      return std::nullopt;
     }
+  }
+
+  std::shared_ptr<YoloApp::VideoHandler>
+  VideoInterface::initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts) {
+    if (!cap.isOpened()) {
+      spdlog::error("Cannot open video file");
+      throw std::runtime_error("Cannot open video file");
+    }
+    if (videoHandler == nullptr) {
+      videoHandler = std::make_shared<VideoHandler>(cap, api, writer, redis, YoloApp::classNames, opts);
+    }
+    return videoHandler;
   }
 }
