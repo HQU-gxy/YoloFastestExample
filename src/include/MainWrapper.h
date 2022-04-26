@@ -16,6 +16,7 @@ namespace YoloApp::Main {
 
   struct Options {
     std::string inputFilePath;
+    std::string outputFileName;
     std::string paramPath;
     std::string binPath;
     std::string rtmpUrl;
@@ -32,6 +33,8 @@ namespace YoloApp::Main {
     YoloFastestV2 api;
     YoloApp::Options options;
     Options opts;
+    r::Redis pullRedis;
+    r::Redis pushRedis;
     YoloApp::Options videoOpts;
     std::unique_ptr<VideoInterface> recognize;
     std::unique_ptr<YoloApp::PullTask> pullJob;
@@ -43,6 +46,8 @@ namespace YoloApp::Main {
     std::thread pushRun();
 
     void blockPullRun();
+
+    void initPull();
   };
 
   YoloApp::Options toVideoOptions(const Options &opts);

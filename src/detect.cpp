@@ -128,8 +128,9 @@ VideoHandler::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opt
                              const std::string pipeline) {
   auto [frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+  auto writer = cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+                      cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+  return writer;
 }
 
 YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
@@ -211,9 +212,9 @@ int VideoHandler::run() {
 
     // Usually this should not be true
     // unless realtime streaming is enabled
-    if (this->isWriteVideoWriter) {
-      video_writer.write(cvImgResized);
-    }
+//    if (this->isWriteVideoWriter) {
+//      video_writer.write(cvImgResized);
+//    }
 
     auto end = ncnn::get_current_time();
 

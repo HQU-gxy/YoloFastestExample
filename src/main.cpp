@@ -1,12 +1,7 @@
-#include <csignal>
-#include <future>
-#include "include/detect.h"
-#include "include/VideoInterface.h"
+#include "include/MainWrapper.h"
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
-
-using namespace sw::redis;
 
 int main(int argc, char **argv) {
   // ./Yolo-Fastestv2 -i ../test.jpg -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin
@@ -42,49 +37,28 @@ int main(int argc, char **argv) {
   app.add_flag("-d,--debug", isDebug, "Enable debug log");
   CLI11_PARSE(app, argc, argv)
 
-  if (isDebug) {
-    spdlog::set_level(spdlog::level::debug);
-  }
-
-  auto redis = Redis(redisUrl);
-
-  YoloFastestV2 api(threadsNum, thresholdNMS);
-  YoloApp::Options opts{
+  // Thank you copilot
+  auto opts = YoloApp::Main::Options{
+      .inputFilePath = inputFilePath,
       .outputFileName = outputFileName,
+      .paramPath = paramPath,
+      .binPath = binPath,
       .rtmpUrl = rtmpUrl,
+      .redisUrl = redisUrl,
       .scaledCoeffs = scaledCoeffs,
-      .cropCoeffs = cropCoeffs,
+      .thresholdNMS = thresholdNMS,
       .outFps = outFps,
+      .cropCoeffs = cropCoeffs,
+      .threadsNum = threadsNum,
       .isDebug = isDebug,
   };
-  api.loadModel(paramPath.c_str(), binPath.c_str());
 
-  // Ctrl + C
-  // Use Signal Sign to tell the application to stop
-  signal(SIGINT, [](int sig) {
-    spdlog::error("SIGINT is received. Force stopping the application");
-    exit(1);
-  });
+  auto m = YoloApp::Main::MainWrapper(opts);
+  m.init();
+  auto push = m.pushRun();
+  push.detach();
+  m.blockPullRun();
 
-  // Ctrl + Z
-  // Don't just use exit() or OpenCV won't save the video correctly
-  signal(SIGTSTP, [](int sig) {
-    spdlog::warn("SIGTSTP is received. Stopping capture");
-    YoloApp::IS_CAPTURE_ENABLED = false;
-  });
-
-  // TODO: try to handle image. Just call the YoloApp::detectFrame()
-  auto recognize = YoloApp::createFile(inputFilePath).value();
-  auto capsProps = recognize->getCapProps();
-  std::thread pushTask([&]() {
-    recognize->recognize(api, redis, opts);
-  });
-  pushTask.detach();
-
-  auto writer = YoloApp::VideoHandler::newVideoWriter(capsProps, opts, YoloApp::base_pipeline + rtmpUrl);
-  YoloApp::PullTask pullJob(writer);
-  auto pullRedis = sw::redis::Redis(redisUrl);
-  pullJob.run(opts, pullRedis);
   return YoloApp::Error::SUCCESS;
 }
 
