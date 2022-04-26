@@ -57,7 +57,8 @@ int main(int argc, char **argv) {
   m.init();
   auto push = m.pushRun();
   push.detach();
-  m.blockPullRun();
+  auto pull = m.pullRun();
+  pull.join();
 
   return YoloApp::Error::SUCCESS;
 }

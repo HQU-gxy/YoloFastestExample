@@ -60,7 +60,7 @@ namespace YoloApp {
 
     void setOpts(const YoloApp::Options &opts);
 
-    void setVideoWriter(cv::VideoWriter &writer);
+    void setVideoWriter(cv::VideoWriter writer);
 
     static cv::VideoWriter
     newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
@@ -81,11 +81,12 @@ namespace YoloApp {
   };
   class PullTask {
   private:
-    cv::VideoWriter &writer;
+    cv::VideoWriter writer;
   public:
     bool isReadRedis = true;
-    void setVideoWriter(cv::VideoWriter &writer);
-    PullTask(cv::VideoWriter &writer);
+    void setVideoWriter(cv::VideoWriter writer);
+    PullTask(cv::VideoWriter writer);
+    PullTask(std::string pipeline);
     void run(Options opts, sw::redis::Redis& redis);
   };
 }

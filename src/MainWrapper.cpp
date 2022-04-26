@@ -10,26 +10,61 @@ namespace y = YoloApp;
 
 void m::MainWrapper::init() {
 
-//  // Ctrl + C
-//  // Use Signal Sign to tell the application to stop
-//  signal(SIGINT, [](int sig) {
-//    spdlog::error("SIGINT is received. Force stopping the application");
-//    exit(1);
-//  });
-//
-//
-//  // Ctrl + Z
-//  // Don't just use exit() or OpenCV won't save the video correctly
-//  signal(SIGTSTP, [](int sig) {
-//    spdlog::warn("SIGTSTP is received. Stopping capture");
-//    YoloApp::IS_CAPTURE_ENABLED = false;
-//  });
+  // Ctrl + C
+  // Use Signal Sign to tell the application to stop
+  signal(SIGINT, [](int sig) {
+    spdlog::error("SIGINT is received. Force stopping the application");
+    exit(1);
+  });
+
+
+  // Ctrl + Z
+  // Don't just use exit() or OpenCV won't save the video correctly
+  signal(SIGTSTP, [](int sig) {
+    spdlog::warn("SIGTSTP is received. Stopping capture");
+    YoloApp::IS_CAPTURE_ENABLED = false;
+  });
 
   if (opts.isDebug) {
     spdlog::set_level(spdlog::level::debug);
   }
 
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
+
+  this->capsProps = std::make_unique<CapProps>(recognize->getCapProps());
+  auto writer =
+      YoloApp::VideoHandler::newVideoWriter(*capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
+  // make sure the parameter of PullTask is by value
+  // or RAII will release writer and cause problems.
+  this-> pullJob = std::make_unique<YoloApp::PullTask>(YoloApp::PullTask(writer));
+}
+
+y::Error m::MainWrapper::swapPushWriter(std::string pipeline){
+  try {
+    if (this->recognize == nullptr) {
+      throw std::runtime_error("push thread is uninitialized");
+    }
+    this->recognize->getVideoHandler().value()->setVideoWriter(pipeline);
+    return y::SUCCESS;
+  } catch (std::exception e){
+    spdlog::error(e.what());
+    return y::Error::FAILURE;
+  }
+}
+
+y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
+  try {
+    if (this->pullJob == nullptr || this->capsProps == nullptr) {
+      throw std::runtime_error("pull thread or capsProps is uninitialized");
+    }
+    auto writer =
+        YoloApp::VideoHandler::newVideoWriter(*capsProps, videoOpts, pipeline);
+    this->pullJob->setVideoWriter(writer);
+    return y::SUCCESS;
+  } catch (std::exception e){
+    spdlog::error(e.what());
+    return y::Error::FAILURE;
+  }
 }
 
 std::thread m::MainWrapper::pushRun() {
@@ -43,28 +78,13 @@ std::thread m::MainWrapper::pushRun() {
 }
 
 std::thread m::MainWrapper::pullRun() {
-  if (this->recognize == nullptr) {
+  if (this->pullJob == nullptr) {
     throw std::runtime_error("recognize is uninitialized");
   }
-  auto capsProps = recognize->getCapProps();
-  auto writer =
-      YoloApp::VideoHandler::newVideoWriter(capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
-  this-> pullJob = std::make_unique<YoloApp::PullTask>(YoloApp::PullTask(writer));
   std::thread pullTask([&](){
     pullJob->run(this->videoOpts, this->pullRedis);
   });
   return pullTask;
-}
-
-void m::MainWrapper::blockPullRun() {
-  if (this->recognize == nullptr) {
-    throw std::runtime_error("recognize is uninitialized");
-  }
-  auto capsProps = recognize->getCapProps();
-  auto writer =
-      YoloApp::VideoHandler::newVideoWriter(capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
-  this-> pullJob = std::make_unique<YoloApp::PullTask>(YoloApp::PullTask(writer));
-  pullJob->run(this->videoOpts, pullRedis);
 }
 
 m::MainWrapper::MainWrapper(const m::Options &opts)

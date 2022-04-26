@@ -38,6 +38,7 @@ namespace YoloApp::Main {
     YoloApp::Options videoOpts;
     std::unique_ptr<VideoInterface> recognize;
     std::unique_ptr<YoloApp::PullTask> pullJob;
+    std::unique_ptr<CapProps> capsProps;
 
   public:
     MainWrapper(const Options &opts);
@@ -45,9 +46,8 @@ namespace YoloApp::Main {
     std::thread pullRun();
     std::thread pushRun();
 
-    void blockPullRun();
-
-    void initPull();
+    Error swapPushWriter(std::string pipeline);
+    Error swapPullWriter(std::string pipeline);
   };
 
   YoloApp::Options toVideoOptions(const Options &opts);

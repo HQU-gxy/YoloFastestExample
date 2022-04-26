@@ -97,12 +97,12 @@ auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect
   }
 }
 
-void VideoHandler::setVideoWriter(const std::string &pipeline){
-  auto videoWriter = VideoHandler::newVideoWriter(this->cap, this->opts,pipeline);
+void VideoHandler::setVideoWriter(const std::string &pipeline) {
+  auto videoWriter = VideoHandler::newVideoWriter(this->cap, this->opts, pipeline);
   this->setVideoWriter(videoWriter);
 }
 
-void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
+void VideoHandler::setVideoWriter(cv::VideoWriter writer) {
   auto original_writer = this->video_writer;
   this->video_writer = writer;
   original_writer.release();
@@ -126,11 +126,10 @@ VideoHandler::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
 cv::VideoWriter
 VideoHandler::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
                              const std::string pipeline) {
-  auto [frame_width, frame_height, frame_fps] = props;
+  auto[frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-  auto writer = cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                      cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
-  return writer;
+  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
 
 YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
@@ -186,7 +185,7 @@ int VideoHandler::run() {
     drawTime(cvImgResized);
 
 
-    if (this->isWriteRedis){
+    if (this->isWriteRedis) {
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
@@ -228,11 +227,12 @@ int VideoHandler::run() {
   return YoloApp::Error::SUCCESS;
 }
 
-PullTask::PullTask(cv::VideoWriter &writer) : writer{writer} {}
+// intended to use copy instead of reference
+PullTask::PullTask(cv::VideoWriter writer) : writer{writer} {}
 
 void PullTask::run(Options opts, sw::redis::Redis &redis) {
   while (YoloApp::IS_CAPTURE_ENABLED) {
-    if (this->isReadRedis){
+    if (this->isReadRedis) {
       //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
       /// It's wasteful to copy the data, but it's the only way to get the data
       /// without causing problems.
@@ -258,7 +258,7 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
   }
 }
 
-void PullTask::setVideoWriter(cv::VideoWriter &writer) {
+void PullTask::setVideoWriter(cv::VideoWriter writer) {
   auto original_writer = this->writer;
   this->writer = writer;
   original_writer.release();
