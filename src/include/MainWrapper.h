@@ -50,7 +50,7 @@ namespace YoloApp::Main {
     Error swapPullWriter(std::string pipeline);
   };
 
-  YoloApp::Options toVideoOptions(const Options &opts);
+  static YoloApp::Options toVideoOptions(const Options &opts);
 }
 
 

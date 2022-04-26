@@ -18,11 +18,7 @@ namespace YoloApp {
     std::string type = "Unknown";
     std::string filePath;
     cv::VideoCapture cap;
-    std::shared_ptr<YoloApp::VideoHandler> videoHandler = nullptr;
-
-    inline void setType(const std::string &type) {
-      VideoInterface::type = type;
-    }
+    std::shared_ptr<YoloApp::VideoHandler> videoHandler;
 
     std::shared_ptr<VideoHandler>
     initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts);
@@ -58,7 +54,7 @@ namespace YoloApp {
   class Video : public VideoInterface {
   public:
     inline Video(const std::string inputFileName) : VideoInterface(inputFileName) {
-      setType("Video");
+      this->type = "Video";
       spdlog::debug("Input File is {}", type);
       this->cap = cv::VideoCapture(filePath);
     }
@@ -67,7 +63,7 @@ namespace YoloApp {
   class Stream : public VideoInterface {
   public:
     inline Stream(const int index) : VideoInterface(std::to_string(index)) {
-      setType("Stream");
+      this->type = "Stream";
       spdlog::info("Streaming from camera {}", index);
       // I don't output the video to file for stream
       this->cap = cv::VideoCapture(index);
