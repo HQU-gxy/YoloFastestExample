@@ -16,6 +16,6 @@
 [submodule "lib/hiredis"]
 	path = lib/hiredis
 	url = https://github.com/redis/hiredis
-[submodule "lib/subevent"]
-	path = lib/subevent
-	url = https://github.com/Ichishino/subevent
+[submodule "lib/pybind11"]
+	path = lib/pybind11
+	url = https://github.com/pybind/pybind11

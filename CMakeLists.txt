@@ -8,9 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV REQUIRED)
 
-## Ichishino / subevent
-set(SUBEVENT_DIR lib/subevent)
-include_directories(${SUBEVENT_DIR}/inc)
+## Pybind11
+## https://pybind11.readthedocs.io/en/latest/compiling.html#building-with-cmake
+set(PYBIND11_DIR lib/pybind11)
+add_subdirectory(${PYBIND11_DIR})
 
 # target spdlog
 # you can just comment this line if you want to system library
@@ -104,3 +105,5 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_I
 target_link_libraries(Yolo-FastestV2 ${NCNN_LIBS})
 target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
 target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
+
+#pybind11_add_module(Yolo-FastestV2-Pybind src/main.cpp)
