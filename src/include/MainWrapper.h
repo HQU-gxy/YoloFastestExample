@@ -55,6 +55,10 @@ namespace YoloApp::Main {
     Error swapPullWriter(std::string pipeline);
 
     const Options &getOpts() const;
+
+    void pushRunDetach();
+
+    void pullRunDetach();
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

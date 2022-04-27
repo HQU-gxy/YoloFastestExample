@@ -9,7 +9,6 @@ namespace r = sw::redis;
 namespace y = YoloApp;
 
 void m::MainWrapper::init() {
-
   // Ctrl + C
   // Use Signal Sign to tell the application to stop
   signal(SIGINT, [](int sig) {
@@ -75,6 +74,14 @@ std::thread m::MainWrapper::pushRun() {
     this->recognize->recognize(this->api, this->pushRedis, this->videoOpts);
   });
   return pushTask;
+}
+
+void m::MainWrapper::pushRunDetach() {
+  this->pushRun().detach();
+}
+
+void m::MainWrapper::pullRunDetach() {
+  this->pullRun().detach();
 }
 
 std::thread m::MainWrapper::pullRun() {
