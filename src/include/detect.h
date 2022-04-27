@@ -44,8 +44,8 @@ namespace YoloApp {
               const std::vector<const char *> &classNames,
               const std::function<void(const std::vector<TargetBox> &)>& cb);
 
-  using pt = std::pair<int, int>;
-  using pt_pair = std::pair<pt, pt>;
+  using pt = std::tuple<int, int>;
+  using pt_pair = std::tuple<pt, pt>;
 
   auto detectDoor(cv::Mat &detectImg,
                   cv::Mat &drawImg,

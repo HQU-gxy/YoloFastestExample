@@ -21,8 +21,8 @@ base_pipeline = "appsrc ! " + \
                 "rtmpsink location="
 
 opts_dict = {
-    "input_file_path": "0",
-    # "input_file_path": os.path.join(so_root, "test.mp4"),
+    # "input_file_path": "0",
+    "input_file_path": os.path.join(so_root, "test.mp4"),
     "output_file_path": "",
     "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
     "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
@@ -33,7 +33,7 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": False,
+    "is_debug": True,
 }
 
 # stream

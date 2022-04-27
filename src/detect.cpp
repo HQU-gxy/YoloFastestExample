@@ -109,6 +109,7 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
       auto angle = abs(atan2(y2 - y1, x2 - x1) * 180 / CV_PI);
       if (angle > 85 && angle < 95) {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+        spdlog::debug("Points: {}, {}, {}, {}", x1, y1, x2, y2);
         door_lines.emplace_back(make_pair(x1, y1), make_pair(x2, y2));
       } else {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
