@@ -50,9 +50,6 @@ namespace YoloApp::Main {
 
   public:
 
-    #ifndef _STANDALONE_ON
-    MainWrapper(const py::dict &dict);
-    #endif
     MainWrapper(const Options &opts);
     void init();
     std::thread pullRun();

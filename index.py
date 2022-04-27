@@ -32,15 +32,16 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": False,
+    "is_debug": True,
 }
+
 
 def print_target(xs):
     for x in xs:
         print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
 
-
-main = yolo_app.MainWrapper(opts_dict)
+opts = yolo_app.init_options(opts_dict)
+main = yolo_app.MainWrapper(opts)
 main.init()
 main.set_on_detect_yolo(print_target)
 main.run_push()

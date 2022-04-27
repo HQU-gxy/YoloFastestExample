@@ -28,7 +28,6 @@ PYBIND11_MODULE(yolo_app, m) {
   py::class_<m::Options>(m, "Options");
   m.def("init_options", &m::OptionsFromPyDict);
   py::class_<m::MainWrapper>(m, "MainWrapper")
-  .def(py::init<const py::dict &>())
   .def(py::init<const m::Options &>())
   .def("init", &m::MainWrapper::init)
   .def("run_push", &m::MainWrapper::pushRunDetach)
