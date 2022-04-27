@@ -87,6 +87,34 @@ std::thread m::MainWrapper::pullRun() {
   return pullTask;
 }
 
+m::Options m::OptionsFromPyDict(const py::dict &dict){
+//  py::scoped_interpreter guard{};
+  auto opts = YoloApp::Main::Options{
+      .inputFilePath = dict["input_file_path"].cast<std::string>(),
+      .outputFileName = dict["output_file_path"].cast<std::string>(),
+      .paramPath = dict["param_path"].cast<std::string>(),
+      .binPath = dict["bin_path"].cast<std::string>(),
+      .rtmpUrl = dict["rtmp_url"].cast<std::string>(),
+      .redisUrl = dict["redis_url"].cast<std::string>(),
+      .scaledCoeffs = dict["scaled_coeffs"].cast<float>(),
+      .thresholdNMS = dict["threshold_NMS"].cast<float>(),
+      .outFps = dict["out_fps"].cast<float>(),
+      .cropCoeffs = dict["crop_coeffs"].cast<float>(),
+      .threadsNum = dict["threads_num"].cast<int>(),
+      .isDebug = dict["is_debug"].cast<bool>(),
+  };
+  return opts;
+}
+
+m::MainWrapper::MainWrapper(const py::dict &dict)
+    : opts(opts),
+      pullRedis(opts.redisUrl),
+      pushRedis(opts.redisUrl),
+      api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
+      videoOpts(m::toVideoOptions(opts)) {
+  api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
+}
+
 m::MainWrapper::MainWrapper(const m::Options &opts)
     : opts(opts),
       pullRedis(opts.redisUrl),
@@ -94,6 +122,10 @@ m::MainWrapper::MainWrapper(const m::Options &opts)
       api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
       videoOpts(m::toVideoOptions(opts)) {
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
+}
+
+const YoloApp::Main::Options &YoloApp::Main::MainWrapper::getOpts() const {
+  return opts;
 }
 
 y::Options m::toVideoOptions(const m::Options &opts){
@@ -107,3 +139,7 @@ y::Options m::toVideoOptions(const m::Options &opts){
   };
   return vopts;
 }
+
+
+
+

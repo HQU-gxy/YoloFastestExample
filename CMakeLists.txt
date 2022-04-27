@@ -8,10 +8,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV REQUIRED)
 
+
+
 ## Pybind11
 ## https://pybind11.readthedocs.io/en/latest/compiling.html#building-with-cmake
 set(PYBIND11_DIR lib/pybind11)
 add_subdirectory(${PYBIND11_DIR})
+
+# No idea why this broken
+# See https://cmake.org/cmake/help/latest/module/FindPython3.html#module:FindPython3
+#find_package(Python3 COMPONENTS Interpreter Development)
+#if (NOT PYTHON3_FOUND)
+#    message(FATAL_ERROR "Python3 is required to build this project")
+#endif()
+#message(STATUS "Python_VERSION = ${Python_VERSION}")
+#message(STATUS "Python3_INCLUDE_DIR = ${PYTHON3_INCLUDE_DIR}")
+#message(STATUS "Python3_LIBRARY = ${PYTHON3_LIBRARY}")
+
+# python-config --includes
+# -I/usr/include/python3.10 -I/usr/include/python3.10
+set(Python3_INCLUDE_DIR /usr/include/python3.10)
+include_directories(${Python3_INCLUDE_DIR})
+set(Python3_LIBRARY /usr/lib/libpython3.10.so)
 
 # target spdlog
 # you can just comment this line if you want to system library
@@ -79,7 +97,14 @@ set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_INCLUDE_DIRS src/include)
-set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp src/include/VideoInterface.h src/VideoInterface.cpp src/MainWrapper.cpp src/include/MainWrapper.h)
+set(MAIN_SRC
+        src/main.cpp
+        src/utils.cpp
+        src/detect.cpp
+        src/include/VideoInterface.h
+        src/VideoInterface.cpp
+        src/MainWrapper.cpp
+        src/include/MainWrapper.h)
 
 # The named <target> must have been created by a command such as add_executable()
 # or add_library() and must not be an ALIAS target.
@@ -105,5 +130,17 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_I
 target_link_libraries(Yolo-FastestV2 ${NCNN_LIBS})
 target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
 target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
+target_link_libraries(Yolo-FastestV2 ${Python3_LIBRARY})
 
-#pybind11_add_module(Yolo-FastestV2-Pybind src/main.cpp)
+set(PY_BIND_SRC bind/MainWrapperBind.cpp)
+
+# Remember to select a new target in CLion
+pybind11_add_module(yolo_app
+        ${PY_BIND_SRC}
+        ${MAIN_SRC}
+        ${YOLO_FASTEST_SRC})
+target_link_libraries(yolo_app PRIVATE ${OpenCV_LIBS})
+target_link_libraries(yolo_app PRIVATE ${HIREDIS_LIB})
+target_link_libraries(yolo_app PRIVATE ${REDIS_PLUS_PLUS_LIB})
+target_link_libraries(yolo_app PRIVATE ${NCNN_LIBS})
+#target_link_libraries(yolo_app PRIVATE spdlog::spdlog)

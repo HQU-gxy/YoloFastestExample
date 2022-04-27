@@ -9,7 +9,10 @@
 #include <future>
 #include "detect.h"
 #include "VideoInterface.h"
+#include <pybind11/pybind11.h>
+#include <pybind11/embed.h>
 
+namespace py = pybind11;
 namespace r = sw::redis;
 
 namespace YoloApp::Main {
@@ -30,6 +33,7 @@ namespace YoloApp::Main {
   };
 
   class MainWrapper {
+  private:
     YoloFastestV2 api;
     YoloApp::Options options;
     Options opts;
@@ -41,6 +45,7 @@ namespace YoloApp::Main {
     std::unique_ptr<CapProps> capsProps;
 
   public:
+    MainWrapper(const py::dict &dict);
     MainWrapper(const Options &opts);
     void init();
     std::thread pullRun();
@@ -48,9 +53,12 @@ namespace YoloApp::Main {
 
     Error swapPushWriter(std::string pipeline);
     Error swapPullWriter(std::string pipeline);
+
+    const Options &getOpts() const;
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);
+  Options OptionsFromPyDict(const py::dict &dict);
 }
 
 
