@@ -55,6 +55,13 @@ int main(int argc, char **argv) {
 
   auto m = YoloApp::Main::MainWrapper(opts);
   m.init();
+  /*
+    m.setOnDetectYolo([](std::vector<TargetBox> result){
+      for (auto &r : result) {
+        spdlog::info("{}, {}", r.x1, r.y1);
+      }
+    });
+   */
   auto push = m.pushRun();
   push.detach();
   auto pull = m.pullRun();

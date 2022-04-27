@@ -9,6 +9,9 @@
 
 using namespace YoloApp;
 
+using pt = std::pair<int, int>;
+using pt_pair = std::pair<pt, pt>;
+
 /// a global flag in order to make signal function work
 bool YoloApp::IS_CAPTURE_ENABLED = true;
 const std::vector<char const *> YoloApp::classNames = {
@@ -32,8 +35,11 @@ const std::string YoloApp::base_pipeline = "appsrc ! "
 /// not a pure function, will modify the drawImg
 /// @param classNames  the name of the class to be detected (array of strings)
 std::vector<TargetBox>
-YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
-                     const std::vector<const char *> &classNames) {
+YoloApp::detectFrame(cv::Mat &detectImg,
+                     cv::Mat &drawImg,
+                     YoloFastestV2 &api,
+                     const std::vector<const char *> &classNames,
+                     std::function<void(const std::vector<TargetBox> &)> cb) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -61,6 +67,7 @@ YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
     cv::rectangle(drawImg, cv::Point(box.x1, box.y1),
                   cv::Point(box.x2, box.y2), cv::Scalar(255, 255, 0), 2, 2, 0);
   }
+  cb(boxes);
   return boxes;
 }
 
@@ -72,11 +79,17 @@ auto drawTime(cv::Mat &drawImg) {
               cv::LINE_AA);
 }
 
-auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
+auto YoloApp::detectDoor(cv::Mat &detectImg,
+                         cv::Mat &drawImg,
+                         cv::Rect cropRect,
+                         std::function<void(const std::vector<pt_pair> &)> cb) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
 
+  using namespace std;
+  // two pairs of points in a std::pair
+  vector<pt_pair> door_lines;
   cv::GaussianBlur(detectImg, processedImg, cv::Size(5, 5), 0, 0);
   cv::Canny(processedImg, edges, 100, 200);
   cv::HoughLinesP(edges, lines, 0.5, CV_PI / 180, 30, 50, 10);
@@ -90,11 +103,14 @@ auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect
       auto angle = abs(atan2(y2 - y1, x2 - x1) * 180 / CV_PI);
       if (angle > 85 && angle < 95) {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+        door_lines.push_back(make_pair(make_pair(x1, y1), make_pair(x2, y2)));
       } else {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
       }
     });
   }
+  cb(door_lines);
+  return door_lines;
 }
 
 void VideoHandler::setOpts(const YoloApp::Options &opts) {
@@ -168,9 +184,9 @@ int VideoHandler::run() {
     auto origImg = cvImgResized.clone();
     auto croppedImg = cvImgResized(cropRect);
 
-    detectDoor(croppedImg, cvImgResized, cropRect);
+    detectDoor(croppedImg, cvImgResized, cropRect, onDetectDoor);
     cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
-    auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
+    auto boxes = detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
     drawTime(cvImgResized);
 
 
@@ -249,4 +265,12 @@ void PullTask::setVideoWriter(cv::VideoWriter writer) {
 
 const Options &VideoHandler::getOpts() const {
   return opts;
+}
+
+void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
+  VideoHandler::onDetectDoor = onDetectDoor;
+}
+
+void VideoHandler::setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
+  VideoHandler::onDetectYolo = onDetectYolo;
 }

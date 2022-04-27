@@ -112,6 +112,24 @@ const YoloApp::Main::Options &YoloApp::Main::MainWrapper::getOpts() const {
   return opts;
 }
 
+void
+YoloApp::Main::MainWrapper::setOnDetectDoor
+(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
+  if (this->handler == nullptr) {
+    throw std::runtime_error("handler is uninitialized");
+  }
+  this->handler->setOnDetectDoor(onDetectDoor);
+}
+
+void
+YoloApp::Main::MainWrapper::setOnDetectYolo
+(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
+  if (this->handler == nullptr) {
+    throw std::runtime_error("handler is uninitialized");
+  }
+  this->handler->setOnDetectYolo(onDetectYolo);
+}
+
 y::Options m::toVideoOptions(const m::Options &opts){
   YoloApp::Options vopts{
       .outputFileName = opts.outputFileName,

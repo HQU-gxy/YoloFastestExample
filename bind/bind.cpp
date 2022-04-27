@@ -4,12 +4,17 @@
 
 #include "../src/include/MainWrapper.h"
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/functional.h>
 #include <pybind11/embed.h>
 
 namespace py = pybind11;
 namespace m = YoloApp::Main;
 namespace r = sw::redis;
 namespace y = YoloApp;
+
+using pt = std::pair<int, int>;
+using pt_pair = std::pair<pt, pt>;
 
 PYBIND11_MODULE(yolo_app, m) {
   m.doc() = R"pbdoc(

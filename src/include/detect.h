@@ -38,21 +38,32 @@ namespace YoloApp {
   };
 
   std::vector<TargetBox>
-  detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
+  detectFrame(cv::Mat &detectImg,
+              cv::Mat &drawImg,
+              YoloFastestV2 &api,
+              const std::vector<const char *> &classNames,
+              std::function<void(const std::vector<TargetBox> &)> cb);
 
-  auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
+  using pt = std::pair<int, int>;
+  using pt_pair = std::pair<pt, pt>;
+  auto detectDoor(cv::Mat &detectImg,
+                  cv::Mat &drawImg,
+                  cv::Rect cropRect,
+                  std::function<void(const std::vector<pt_pair> &)> cb);
 
   // TODO: disable copy but enable move
   class VideoHandler {
   private:
-    std::function<void(const std::string &)> onDetectYolo = [](const std::string &) {};
-    std::function<void(const std::string &)> onDetectDoor = [](const std::string &) {};
-    std::function<void(const std::string &)> onError = [](const std::string &) {};
-    std::function<void(const std::string &)> onInfo = [](const std::string &) {};
+    std::function<void(const std::vector<pt_pair> &)> onDetectDoor = [](const std::vector<pt_pair> &) {};
+    std::function<void(const std::vector<TargetBox> &)> onDetectYolo = [](const std::vector<TargetBox> &) {};
+//    std::function<void(const std::string &)> onError = [](const std::string &) {};
+//    std::function<void(const std::string &)> onInfo = [](const std::string &) {};
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
 //    cv::VideoWriter &video_writer;
   public:
+    void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
+    void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
