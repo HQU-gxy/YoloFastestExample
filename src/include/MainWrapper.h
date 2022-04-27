@@ -42,17 +42,16 @@ namespace YoloApp::Main {
     r::Redis pushRedis;
     YoloApp::Options videoOpts;
     std::unique_ptr<VideoInterface> recognize;
+    std::shared_ptr<VideoHandler> handler;
     std::unique_ptr<YoloApp::PullTask> pullJob;
     std::unique_ptr<CapProps> capsProps;
 
   public:
-    MainWrapper(const py::dict &dict);
     MainWrapper(const Options &opts);
     void init();
     std::thread pullRun();
     std::thread pushRun();
 
-    Error swapPushWriter(std::string pipeline);
     Error swapPullWriter(std::string pipeline);
 
     const Options &getOpts() const;

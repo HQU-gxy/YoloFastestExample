@@ -97,23 +97,12 @@ auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect
   }
 }
 
-void VideoHandler::setVideoWriter(const std::string &pipeline) {
-  auto videoWriter = VideoHandler::newVideoWriter(this->cap, this->opts, pipeline);
-  this->setVideoWriter(videoWriter);
-}
-
-void VideoHandler::setVideoWriter(cv::VideoWriter writer) {
-  auto original_writer = this->video_writer;
-  this->video_writer = writer;
-  original_writer.release();
-}
-
 void VideoHandler::setOpts(const YoloApp::Options &opts) {
   VideoHandler::opts = opts;
 }
 
 cv::VideoWriter
-VideoHandler::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
+YoloApp::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
                              const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
@@ -124,7 +113,7 @@ VideoHandler::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
 }
 
 cv::VideoWriter
-VideoHandler::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+YoloApp::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
                              const std::string pipeline) {
   auto[frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
@@ -132,7 +121,7 @@ VideoHandler::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opt
                          cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
 
-YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
+YoloApp::CapProps YoloApp::getCapProps(cv::VideoCapture &cap) {
   return {
       cap.get(cv::CAP_PROP_FRAME_WIDTH),
       cap.get(cv::CAP_PROP_FRAME_HEIGHT),
@@ -141,9 +130,9 @@ YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
 }
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
-VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                            const std::vector<const char *> classNames, const YoloApp::Options opts)
-    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts}, video_writer{writer} {}
+    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {}
 
 int VideoHandler::run() {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -260,10 +249,4 @@ void PullTask::setVideoWriter(cv::VideoWriter writer) {
 
 const Options &VideoHandler::getOpts() const {
   return opts;
-}
-
-// I expected to copy
-cv::VideoWriter VideoHandler::getVideoWriter() const {
-  auto temp = video_writer;
-  return temp;
 }

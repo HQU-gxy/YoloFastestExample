@@ -29,26 +29,13 @@ void m::MainWrapper::init() {
   }
 
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
-
+  this->handler = this->recognize->initializeVideoHandler(api, pushRedis, videoOpts);
   this->capsProps = std::make_unique<CapProps>(recognize->getCapProps());
   auto writer =
-      YoloApp::VideoHandler::newVideoWriter(*capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
+      YoloApp::newVideoWriter(*capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
   // make sure the parameter of PullTask is by value
   // or RAII will release writer and cause problems.
   this-> pullJob = std::make_unique<YoloApp::PullTask>(YoloApp::PullTask(writer));
-}
-
-y::Error m::MainWrapper::swapPushWriter(std::string pipeline){
-  try {
-    if (this->recognize == nullptr) {
-      throw std::runtime_error("push thread is uninitialized");
-    }
-    this->recognize->getVideoHandler().value()->setVideoWriter(pipeline);
-    return y::SUCCESS;
-  } catch (std::exception e){
-    spdlog::error(e.what());
-    return y::Error::FAILURE;
-  }
 }
 
 y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
@@ -57,7 +44,7 @@ y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
       throw std::runtime_error("pull thread or capsProps is uninitialized");
     }
     auto writer =
-        YoloApp::VideoHandler::newVideoWriter(*capsProps, videoOpts, pipeline);
+        YoloApp::newVideoWriter(*capsProps, videoOpts, pipeline);
     this->pullJob->setVideoWriter(writer);
     return y::SUCCESS;
   } catch (std::exception e){
@@ -71,7 +58,7 @@ std::thread m::MainWrapper::pushRun() {
     throw std::runtime_error("recognize is uninitialized");
   }
   std::thread pushTask([&](){
-    this->recognize->recognize(this->api, this->pushRedis, this->videoOpts);
+    this->handler->run();
   });
   return pushTask;
 }
@@ -110,15 +97,6 @@ m::Options m::OptionsFromPyDict(const py::dict &dict){
       .isDebug = dict["is_debug"].cast<bool>(),
   };
   return opts;
-}
-
-m::MainWrapper::MainWrapper(const py::dict &dict)
-    : opts(opts),
-      pullRedis(opts.redisUrl),
-      pushRedis(opts.redisUrl),
-      api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
-      videoOpts(m::toVideoOptions(opts)) {
-  api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
 }
 
 m::MainWrapper::MainWrapper(const m::Options &opts)

@@ -28,7 +28,6 @@ PYBIND11_MODULE(yolo_app, m) {
   .def("init", &m::MainWrapper::init)
   .def("run_push", &m::MainWrapper::pushRunDetach)
   .def("run_pull", &m::MainWrapper::pullRunDetach)
-  .def("swap_push_writer", &m::MainWrapper::swapPushWriter)
   .def("swap_pull_writer", &m::MainWrapper::swapPullWriter)
   .def("get_opts", &m::MainWrapper::getOpts)
   .def("__repr__", [](const m::MainWrapper &m) {

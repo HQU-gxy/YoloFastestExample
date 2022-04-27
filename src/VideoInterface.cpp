@@ -8,10 +8,10 @@
 namespace YoloApp {
 
   int VideoInterface::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
-    auto writer = YoloApp::VideoHandler::newVideoWriter(cap, opts,
+    auto writer = YoloApp::newVideoWriter(cap, opts,
                                                         YoloApp::base_pipeline +
                                                         opts.rtmpUrl);
-    this->initializeVideoHandler(api, redis, writer, opts)->run();
+    this->initializeVideoHandler(api, redis, opts)->run();
     return YoloApp::Error::SUCCESS;
   }
 
@@ -29,13 +29,13 @@ namespace YoloApp {
   }
 
   std::shared_ptr<YoloApp::VideoHandler>
-  VideoInterface::initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts) {
+  VideoInterface::initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options opts) {
     if (!cap.isOpened()) {
       spdlog::error("Cannot open video file");
       throw std::runtime_error("Cannot open video file");
     }
     if (videoHandler == nullptr) {
-      videoHandler = std::make_shared<VideoHandler>(cap, api, writer, redis, YoloApp::classNames, opts);
+      videoHandler = std::make_shared<VideoHandler>(cap, api, redis, YoloApp::classNames, opts);
     }
     return videoHandler;
   }

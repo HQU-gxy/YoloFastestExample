@@ -20,10 +20,10 @@ namespace YoloApp {
     cv::VideoCapture cap;
     std::shared_ptr<YoloApp::VideoHandler> videoHandler;
 
-    std::shared_ptr<VideoHandler>
-    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, cv::VideoWriter &writer, Options opts);
-
   public:
+    std::shared_ptr<YoloApp::VideoHandler>
+    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options opts);
+
     inline VideoInterface(std::string filePath) : filePath(filePath) {
       spdlog::debug("Input File Path: {}", filePath);
     }
@@ -37,7 +37,7 @@ namespace YoloApp {
     }
 
     inline CapProps getCapProps() {
-      return YoloApp::VideoHandler::getCapProps(cap);
+      return YoloApp::getCapProps(cap);
     }
 
     // shared_ptr and unique_ptr are designed to pass by value
