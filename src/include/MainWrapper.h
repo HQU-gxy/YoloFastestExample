@@ -8,11 +8,14 @@
 #include <csignal>
 #include <future>
 #include <functional>
-#include <pybind11/pybind11.h>
 #include "detect.h"
 #include "VideoInterface.h"
 
+#ifndef _STANDALONE_ON
+#include <pybind11/pybind11.h>
 namespace py = pybind11;
+#endif
+
 namespace r = sw::redis;
 
 namespace YoloApp::Main {
@@ -47,9 +50,9 @@ namespace YoloApp::Main {
 
   public:
 
-  #ifndef _STANDALONE_ON
+    #ifndef _STANDALONE_ON
     MainWrapper(const py::dict &dict);
-  #endif
+    #endif
     MainWrapper(const Options &opts);
     void init();
     std::thread pullRun();
@@ -67,7 +70,10 @@ namespace YoloApp::Main {
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);
+
+  #ifndef _STANDALONE_ON
   Options OptionsFromPyDict(const py::dict &dict);
+  #endif
 }
 
 

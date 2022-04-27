@@ -84,6 +84,7 @@ std::thread m::MainWrapper::pullRun() {
   return pullTask;
 }
 
+#ifndef _STANDALONE_ON
 m::Options m::OptionsFromPyDict(const py::dict &dict){
   auto opts = YoloApp::Main::Options{
       .inputFilePath = dict["input_file_path"].cast<std::string>(),
@@ -101,6 +102,7 @@ m::Options m::OptionsFromPyDict(const py::dict &dict){
   };
   return opts;
 }
+#endif
 
 #ifndef _STANDALONE_ON
 // a copy and paste
