@@ -132,7 +132,8 @@ target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
 target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
 target_link_libraries(Yolo-FastestV2 ${Python3_LIBRARY})
 
-set(PY_BIND_SRC bind/MainWrapperBind.cpp)
+set(PY_BIND_SRC
+        bind/bind.cpp)
 
 # Remember to select a new target in CLion
 pybind11_add_module(yolo_app

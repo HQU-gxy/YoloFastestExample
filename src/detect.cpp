@@ -209,12 +209,6 @@ int VideoHandler::run() {
       }
     }
 
-    // Usually this should not be true
-    // unless realtime streaming is enabled
-//    if (this->isWriteVideoWriter) {
-//      video_writer.write(cvImgResized);
-//    }
-
     auto end = ncnn::get_current_time();
 
     real_frame_count++;

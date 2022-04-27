@@ -7,10 +7,11 @@
 
 #include <csignal>
 #include <future>
-#include "detect.h"
-#include "VideoInterface.h"
+#include <functional>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
+#include "detect.h"
+#include "VideoInterface.h"
 
 namespace py = pybind11;
 namespace r = sw::redis;

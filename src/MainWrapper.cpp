@@ -95,7 +95,6 @@ std::thread m::MainWrapper::pullRun() {
 }
 
 m::Options m::OptionsFromPyDict(const py::dict &dict){
-//  py::scoped_interpreter guard{};
   auto opts = YoloApp::Main::Options{
       .inputFilePath = dict["input_file_path"].cast<std::string>(),
       .outputFileName = dict["output_file_path"].cast<std::string>(),

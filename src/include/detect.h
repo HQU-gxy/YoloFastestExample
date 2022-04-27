@@ -17,6 +17,7 @@ namespace YoloApp {
     SUCCESS = 0,
     FAILURE = 1
   };
+
   extern bool IS_CAPTURE_ENABLED;
   extern const std::vector<char const *> classNames;
   extern const std::string base_pipeline;
@@ -44,6 +45,10 @@ namespace YoloApp {
   // TODO: disable copy but enable move
   class VideoHandler {
   private:
+    std::function<void(const std::string &)> onDetectYolo = [](const std::string &) {};
+    std::function<void(const std::string &)> onDetectDoor = [](const std::string &) {};
+    std::function<void(const std::string &)> onError =  [](const std::string &) {};
+    std::function<void(const std::string &)> onInfo =  [](const std::string &) {};
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
     cv::VideoWriter &video_writer;
