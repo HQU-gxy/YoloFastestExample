@@ -5,7 +5,6 @@ import asyncio
 import asyncio_dgram
 from toolz import mapcat
 
-# pwd = os.path.dirname(__file__)
 pwd = os.path.dirname(os.path.realpath(__file__))
 print(pwd)
 so_root = os.path.join(pwd, 'cmake-build-debug')
@@ -39,32 +38,39 @@ opts_dict = {
 }
 
 # stream
+# make sure server and client are share the same port
 global s
 s = None
 
-loop_yolo = asyncio.new_event_loop()
+host = "127.0.0.1"
+port = 12345
+
+# main event_loop
 loop = asyncio.get_event_loop()
+# set_on_detect_yolo callback
+loop_yolo = asyncio.new_event_loop()
 
 
 async def test_async(xs):
     global s
-    if s is None: s = await asyncio_dgram.connect(("127.0.0.1", 12345))
+    if s is None: s = await asyncio_dgram.connect((host, port))
     for x in xs:
         pts = [x.x1, x.y1, x.x2, x.y2]
         byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big'), pts))
         # print(byte_list)
         # print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
         await s.send(byte_list)
-        # data, remote_addr = await s.recv()
-        # print(data)
-    # stream.close()
+        data, remote_addr = await s.recv()
+        print("From Yolo", data)
+
 
 async def udp_server():
     global s
-    if s is None: s = await asyncio_dgram.connect(("127.0.0.1", 12345))
+    if s is None: s = await asyncio_dgram.connect((host, port))
     while True:
         data, remote_addr = await s.recv()
-        print(data)
+        print("From Main", data)
+
 
 def test(xs):
     loop_yolo.run_until_complete(test_async(xs))
