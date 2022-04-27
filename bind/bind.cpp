@@ -6,7 +6,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
-#include <pybind11/embed.h>
 
 namespace py = pybind11;
 namespace m = YoloApp::Main;
@@ -35,6 +34,8 @@ PYBIND11_MODULE(yolo_app, m) {
   .def("run_pull", &m::MainWrapper::pullRunDetach)
   .def("swap_pull_writer", &m::MainWrapper::swapPullWriter)
   .def("get_opts", &m::MainWrapper::getOpts)
+  .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
+  .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
   .def("__repr__", [](const m::MainWrapper &m) {
     return "<MainWrapper>";
   });
@@ -46,6 +47,11 @@ PYBIND11_MODULE(yolo_app, m) {
       .def_readwrite("y2", &TargetBox::y2)
       .def_readwrite("cate", &TargetBox::cate)
       .def_readwrite("score", &TargetBox::score);
+
+  py::enum_<YoloApp::Error>(m, "Err")
+      .value("SUCCESS", YoloApp::Error::SUCCESS)
+      .value("FAILURE", YoloApp::Error::FAILURE)
+      .export_values();
 
   #ifdef VERSION_INFO
   m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

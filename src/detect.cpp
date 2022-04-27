@@ -218,9 +218,9 @@ int VideoHandler::run() {
 
     real_frame_count++;
     if (frame_count > 0) {
-      spdlog::info("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
+      spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
     } else {
-      spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
+      spdlog::debug("[{}]\t{} ms", real_frame_count, end - start);
     }
   }
   return YoloApp::Error::SUCCESS;
