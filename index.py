@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import asyncio
 import asyncio_dgram
 from toolz import mapcat
@@ -22,7 +21,8 @@ base_pipeline = "appsrc ! " + \
                 "rtmpsink location="
 
 opts_dict = {
-    "input_file_path": "0",
+    # "input_file_path": "0",
+    "input_file_path": os.path.join(so_root, "test.mp4"),
     "output_file_path": "",
     "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
     "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
@@ -33,7 +33,7 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": False,
+    "is_debug": True,
 }
 
 # stream
@@ -47,43 +47,65 @@ class UDPApp:
         self.s = None
         self.q = asyncio.Queue(32)
 
+    async def on_door_async(self, xs):
+        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
+        if xs:
+            for x in xs:
+                (x1, y1), (x2, y2) = x
+                pts = [x1, y1, x2, y2]
+                byte_list = bytes.fromhex("80") + bytes(mapcat(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                await self.s.send(byte_list)
+                await self.q.put((byte_list, "door"))
+
     async def on_yolo_async(self, xs):
         if self.s is None: self.s = await asyncio_dgram.connect((host, port))
-        for x in xs:
-            pts = [x.x1, x.y1, x.x2, x.y2]
-            byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big'), pts))
-            await self.s.send(byte_list)
-            await self.q.put(byte_list)
+        if xs:
+            for x in xs:
+                pts = [x.x1, x.y1, x.x2, x.y2]
+                byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                await self.s.send(byte_list)
+                await self.q.put((byte_list, "yolo"))
 
     async def udp_server(self):
         if self.s is None: self.s = await asyncio_dgram.connect((host, port))
         while True:
             if not(self.q.empty()):
-                d = await self.q.get()
-                print("Sent", d)
-            data, remote_addr = await self.s.recv()
-            print("From Main", data)
+                # handle req from self (client)
+                d, sender = await self.q.get()
+                print("{} from {}".format(d, sender))
+                # TODO: set timeout
+                data, remote_addr = await self.s.recv()
+                print("{} from {}".format(data, remote_addr))
+            else:
+                # handle req from server
+                data, remote_addr = await self.s.recv()
+                print("Empty {} from {}".format(data, remote_addr))
 
 
 host = "127.0.0.1"
 port = 12345
 
 # main event_loop
-loop = asyncio.get_event_loop()
+loop = asyncio.new_event_loop()
 # set_on_detect_yolo callback
-loop_yolo = asyncio.new_event_loop()
+loop_cb = asyncio.new_event_loop()
 u = UDPApp(host, port)
 
 
-def on_yolo(xs):
-    loop_yolo.run_until_complete(u.on_yolo_async(xs))
+def on_detect_yolo(xs):
+    loop_cb.run_until_complete(u.on_yolo_async(xs))
     # asyncio.create_task(test_async(xs))
+
+def on_detect_door(xs):
+    loop_cb.run_until_complete(u.on_door_async(xs))
 
 
 opts = yolo_app.init_options(opts_dict)
 main = yolo_app.MainWrapper(opts)
 main.init()
-main.set_on_detect_yolo(on_yolo)
+main.set_on_detect_yolo(on_detect_yolo)
+main.set_on_detect_door(on_detect_door)
+main.set_pull_task_state(True)
 main.run_push()
 main.run_pull()
 

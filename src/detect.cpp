@@ -7,6 +7,11 @@
 #include <cmath>
 #include<vector>
 
+#ifndef _STANDALONE_ON
+#include<pybind11/pybind11.h>
+namespace py = pybind11;
+#endif
+
 using namespace YoloApp;
 
 using pt = std::pair<int, int>;
@@ -67,6 +72,10 @@ YoloApp::detectFrame(cv::Mat &detectImg,
     cv::rectangle(drawImg, cv::Point(box.x1, box.y1),
                   cv::Point(box.x2, box.y2), cv::Scalar(255, 255, 0), 2, 2, 0);
   }
+  // not sure if this is necessary
+  #ifndef _STANDALONE_ON
+  py::gil_scoped_acquire acquire;
+  #endif
   cb(boxes);
   return boxes;
 }
@@ -109,6 +118,9 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
       }
     });
   }
+  #ifndef _STANDALONE_ON
+  py::gil_scoped_acquire acquire;
+  #endif
   cb(door_lines);
   return door_lines;
 }

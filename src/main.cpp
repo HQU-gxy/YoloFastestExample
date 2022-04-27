@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
       }
     });
    */
+  m.setPullTaskState(true);
   auto push = m.pushRun();
   push.detach();
   auto pull = m.pullRun();
