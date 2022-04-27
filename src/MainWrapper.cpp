@@ -9,6 +9,7 @@ namespace r = sw::redis;
 namespace y = YoloApp;
 
 void m::MainWrapper::init() {
+  #ifdef _STANDALONE_ON
   // Ctrl + C
   // Use Signal Sign to tell the application to stop
   signal(SIGINT, [](int sig) {
@@ -23,6 +24,7 @@ void m::MainWrapper::init() {
     spdlog::warn("SIGTSTP is received. Stopping capture");
     YoloApp::IS_CAPTURE_ENABLED = false;
   });
+  #endif
 
   if (opts.isDebug) {
     spdlog::set_level(spdlog::level::debug);
@@ -40,6 +42,7 @@ void m::MainWrapper::init() {
 
 y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
   try {
+    spdlog::info("Swap writer to pipeline {}", pipeline);
     if (this->pullJob == nullptr || this->capsProps == nullptr) {
       throw std::runtime_error("pull thread or capsProps is uninitialized");
     }

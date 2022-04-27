@@ -132,6 +132,10 @@ target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
 target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
 target_link_libraries(Yolo-FastestV2 ${Python3_LIBRARY})
 
+# See src/MainWrapper.cpp for the usage of this variable
+# some part of code won't be used in python bindings
+target_compile_definitions(Yolo-FastestV2 PRIVATE -D_STANDALONE_ON=1)
+
 set(PY_BIND_SRC
         bind/bind.cpp)
 
