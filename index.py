@@ -21,7 +21,6 @@ base_pipeline = "appsrc ! " + \
                 "flvmux ! " + \
                 "rtmpsink location="
 
-#  -i 0 -p ../model/yolo-fastestv2-opt.param -b ../model/yolo-fastestv2-opt.bin -d -s 0.2 --nms 0.125 --rtmp rtmp://localhost:1935/live/test
 opts_dict = {
     "input_file_path": "0",
     "output_file_path": "",
@@ -39,8 +38,32 @@ opts_dict = {
 
 # stream
 # make sure server and client are share the same port
-global s
-s = None
+
+
+class UDPApp:
+    def __init__(self, remote_host, remote_port):
+        self.host = remote_host
+        self.port = remote_port
+        self.s = None
+        self.q = asyncio.Queue(32)
+
+    async def on_yolo_async(self, xs):
+        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
+        for x in xs:
+            pts = [x.x1, x.y1, x.x2, x.y2]
+            byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big'), pts))
+            await self.s.send(byte_list)
+            await self.q.put(byte_list)
+
+    async def udp_server(self):
+        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
+        while True:
+            if not(self.q.empty()):
+                d = await self.q.get()
+                print("Sent", d)
+            data, remote_addr = await self.s.recv()
+            print("From Main", data)
+
 
 host = "127.0.0.1"
 port = 12345
@@ -49,39 +72,19 @@ port = 12345
 loop = asyncio.get_event_loop()
 # set_on_detect_yolo callback
 loop_yolo = asyncio.new_event_loop()
+u = UDPApp(host, port)
 
 
-async def test_async(xs):
-    global s
-    if s is None: s = await asyncio_dgram.connect((host, port))
-    for x in xs:
-        pts = [x.x1, x.y1, x.x2, x.y2]
-        byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big'), pts))
-        # print(byte_list)
-        # print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
-        await s.send(byte_list)
-        data, remote_addr = await s.recv()
-        print("From Yolo", data)
-
-
-async def udp_server():
-    global s
-    if s is None: s = await asyncio_dgram.connect((host, port))
-    while True:
-        data, remote_addr = await s.recv()
-        print("From Main", data)
-
-
-def test(xs):
-    loop_yolo.run_until_complete(test_async(xs))
+def on_yolo(xs):
+    loop_yolo.run_until_complete(u.on_yolo_async(xs))
     # asyncio.create_task(test_async(xs))
 
 
 opts = yolo_app.init_options(opts_dict)
 main = yolo_app.MainWrapper(opts)
 main.init()
-main.set_on_detect_yolo(test)
+main.set_on_detect_yolo(on_yolo)
 main.run_push()
 main.run_pull()
 
-loop.run_until_complete(udp_server())
+loop.run_until_complete(u.udp_server())

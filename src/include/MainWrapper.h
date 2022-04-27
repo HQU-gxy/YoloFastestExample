@@ -64,6 +64,8 @@ namespace YoloApp::Main {
 
     void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
+
+    void setPullTaskState(bool isRunning);
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

@@ -46,6 +46,7 @@ namespace YoloApp {
 
   using pt = std::pair<int, int>;
   using pt_pair = std::pair<pt, pt>;
+
   auto detectDoor(cv::Mat &detectImg,
                   cv::Mat &drawImg,
                   cv::Rect cropRect,
@@ -63,7 +64,9 @@ namespace YoloApp {
 //    cv::VideoWriter &video_writer;
   public:
     void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
+
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
+
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
@@ -91,13 +94,11 @@ namespace YoloApp {
   private:
     cv::VideoWriter writer;
   public:
-    bool isReadRedis = true;
+    bool isReadRedis = false;
 
     void setVideoWriter(cv::VideoWriter writer);
 
     PullTask(cv::VideoWriter writer);
-
-    PullTask(std::string pipeline);
 
     void run(Options opts, sw::redis::Redis &redis);
   };
@@ -108,7 +109,6 @@ namespace YoloApp {
   cv::VideoWriter
   newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
                  const std::string pipeline);
-
 
   YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 }

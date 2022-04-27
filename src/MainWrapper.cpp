@@ -135,6 +135,13 @@ YoloApp::Main::MainWrapper::setOnDetectYolo
   this->handler->setOnDetectYolo(onDetectYolo);
 }
 
+void YoloApp::Main::MainWrapper::setPullTaskState(bool isRunning) {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  this->pullJob->isReadRedis = isRunning;
+}
+
 y::Options m::toVideoOptions(const m::Options &opts){
   YoloApp::Options vopts{
       .outputFileName = opts.outputFileName,

@@ -28,16 +28,17 @@ PYBIND11_MODULE(yolo_app, m) {
   py::class_<m::Options>(m, "Options");
   m.def("init_options", &m::OptionsFromPyDict);
   py::class_<m::MainWrapper>(m, "MainWrapper")
-  .def(py::init<const m::Options &>())
-  .def("init", &m::MainWrapper::init)
-  .def("run_push", &m::MainWrapper::pushRunDetach)
-  .def("run_pull", &m::MainWrapper::pullRunDetach)
-  .def("swap_pull_writer", &m::MainWrapper::swapPullWriter)
-  .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
-  .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
-  .def("__repr__", [](const m::MainWrapper &m) {
-    return "<MainWrapper>";
-  });
+      .def(py::init<const m::Options &>())
+      .def("init", &m::MainWrapper::init)
+      .def("run_push", &m::MainWrapper::pushRunDetach)
+      .def("run_pull", &m::MainWrapper::pullRunDetach)
+      .def("swap_pull_writer", &m::MainWrapper::swapPullWriter)
+      .def("set_pull_task_state", &m::MainWrapper::setPullTaskState)
+      .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
+      .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
+      .def("__repr__", [](const m::MainWrapper &m) {
+        return "<MainWrapper>";
+      });
 
   py::class_<TargetBox>(m, "TargetBox")
       .def_readwrite("x1", &TargetBox::x1)
