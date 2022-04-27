@@ -36,7 +36,7 @@ void m::MainWrapper::init() {
       YoloApp::newVideoWriter(*capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
   // make sure the parameter of PullTask is by value
   // or RAII will release writer and cause problems.
-  this-> pullJob = std::make_unique<YoloApp::PullTask>(YoloApp::PullTask(writer));
+  this-> pullJob = std::make_unique<YoloApp::PullTask>(writer);
 }
 
 y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
@@ -104,10 +104,10 @@ m::Options m::OptionsFromPyDict(const py::dict &dict){
 #endif
 
 m::MainWrapper::MainWrapper(const m::Options &opts)
-    : opts(opts),
+    : api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
+      opts(opts),
       pullRedis(opts.redisUrl),
       pushRedis(opts.redisUrl),
-      api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
       videoOpts(m::toVideoOptions(opts)) {
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
 }
