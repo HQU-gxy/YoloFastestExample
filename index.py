@@ -1,6 +1,9 @@
 import os
 import sys
 import time
+import asyncio
+import asyncio_dgram
+from toolz import mapcat
 
 # pwd = os.path.dirname(__file__)
 pwd = os.path.dirname(os.path.realpath(__file__))
@@ -32,24 +35,47 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": True,
+    "is_debug": False,
 }
 
+# stream
+global s
+s = None
 
-def print_target(xs):
+loop_yolo = asyncio.new_event_loop()
+loop = asyncio.get_event_loop()
+
+
+async def test_async(xs):
+    global s
+    if s is None: s = await asyncio_dgram.connect(("127.0.0.1", 12345))
     for x in xs:
-        print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
+        pts = [x.x1, x.y1, x.x2, x.y2]
+        byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big'), pts))
+        # print(byte_list)
+        # print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
+        await s.send(byte_list)
+        # data, remote_addr = await s.recv()
+        # print(data)
+    # stream.close()
+
+async def udp_server():
+    global s
+    if s is None: s = await asyncio_dgram.connect(("127.0.0.1", 12345))
+    while True:
+        data, remote_addr = await s.recv()
+        print(data)
+
+def test(xs):
+    loop_yolo.run_until_complete(test_async(xs))
+    # asyncio.create_task(test_async(xs))
+
 
 opts = yolo_app.init_options(opts_dict)
 main = yolo_app.MainWrapper(opts)
 main.init()
-main.set_on_detect_yolo(print_target)
+main.set_on_detect_yolo(test)
 main.run_push()
 main.run_pull()
 
-time.sleep(10)
-
-main.swap_pull_writer(base_pipeline + base_rtmp_url + "test2")
-
-while True:
-    time.sleep(5)
+loop.run_until_complete(udp_server())
