@@ -35,14 +35,14 @@ opts_dict = {
     "is_debug": False,
 }
 
-def printTarget(xs):
+def print_target(xs):
     for x in xs:
         print('From Python: {} {} {} {}'.format(x.x1, x.y1, x.x2, x.y2))
 
-opts = yolo_app.init_options(opts_dict)
-main = yolo_app.MainWrapper(opts)
+
+main = yolo_app.MainWrapper(opts_dict)
 main.init()
-main.set_on_detect_yolo(printTarget)
+main.set_on_detect_yolo(print_target)
 main.run_push()
 main.run_pull()
 

@@ -102,6 +102,18 @@ m::Options m::OptionsFromPyDict(const py::dict &dict){
   return opts;
 }
 
+#ifndef _STANDALONE_ON
+// a copy and paste
+m::MainWrapper::MainWrapper(const py::dict &dict)
+    : opts(OptionsFromPyDict(dict)),
+      pullRedis(opts.redisUrl),
+      pushRedis(opts.redisUrl),
+      api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
+      videoOpts(m::toVideoOptions(opts)) {
+  api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
+}
+#endif
+
 m::MainWrapper::MainWrapper(const m::Options &opts)
     : opts(opts),
       pullRedis(opts.redisUrl),

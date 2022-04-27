@@ -9,7 +9,6 @@
 #include <future>
 #include <functional>
 #include <pybind11/pybind11.h>
-#include <pybind11/embed.h>
 #include "detect.h"
 #include "VideoInterface.h"
 
@@ -47,6 +46,10 @@ namespace YoloApp::Main {
     std::unique_ptr<CapProps> capsProps;
 
   public:
+
+  #ifndef _STANDALONE_ON
+    MainWrapper(const py::dict &dict);
+  #endif
     MainWrapper(const Options &opts);
     void init();
     std::thread pullRun();
