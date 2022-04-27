@@ -21,8 +21,8 @@ base_pipeline = "appsrc ! " + \
                 "rtmpsink location="
 
 opts_dict = {
-    # "input_file_path": "0",
-    "input_file_path": os.path.join(so_root, "test.mp4"),
+    "input_file_path": "0",
+    # "input_file_path": os.path.join(so_root, "test.mp4"),
     "output_file_path": "",
     "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
     "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
@@ -33,7 +33,7 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": True,
+    "is_debug": False,
 }
 
 # stream
@@ -41,9 +41,11 @@ opts_dict = {
 
 
 class UDPApp:
-    def __init__(self, remote_host, remote_port):
+    def __init__(self, remote_host, remote_port, yolo_app):
         self.host = remote_host
         self.port = remote_port
+        # yolo_app is MainWrapper
+        self.app = yolo_app
         self.s = None
         self.q = asyncio.Queue(32)
 
@@ -88,13 +90,14 @@ port = 12345
 # main event_loop
 loop = asyncio.new_event_loop()
 # set_on_detect_yolo callback
+# no idea whether addition event_loop is necessary
 loop_cb = asyncio.new_event_loop()
-u = UDPApp(host, port)
 
 
 def on_detect_yolo(xs):
     loop_cb.run_until_complete(u.on_yolo_async(xs))
     # asyncio.create_task(test_async(xs))
+
 
 def on_detect_door(xs):
     loop_cb.run_until_complete(u.on_door_async(xs))
@@ -103,9 +106,10 @@ def on_detect_door(xs):
 opts = yolo_app.init_options(opts_dict)
 main = yolo_app.MainWrapper(opts)
 main.init()
+u = UDPApp(host, port, main)
 main.set_on_detect_yolo(on_detect_yolo)
 main.set_on_detect_door(on_detect_door)
-main.set_pull_task_state(True)
+main.set_pull_task_state(False)
 main.run_push()
 main.run_pull()
 

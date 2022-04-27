@@ -18,7 +18,6 @@ int main(int argc, char **argv) {
   float cropCoeffs = 0.1;
   int threadsNum = 4;
   bool isDebug = false;
-  bool isRedis = true;
   app.add_option("-i,--input", inputFilePath, "Input file location")->required();
   app.add_option("-o,--output", outputFileName, "Output file location");
   app.add_option("-s,--scale", scaledCoeffs, "Scale coefficient for video output")->check(CLI::Range(0.0, 1.0));
@@ -55,13 +54,6 @@ int main(int argc, char **argv) {
 
   auto m = YoloApp::Main::MainWrapper(opts);
   m.init();
-  /*
-    m.setOnDetectYolo([](std::vector<TargetBox> result){
-      for (auto &r : result) {
-        spdlog::info("{}, {}", r.x1, r.y1);
-      }
-    });
-   */
   m.setPullTaskState(true);
   auto push = m.pushRun();
   push.detach();

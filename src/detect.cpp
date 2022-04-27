@@ -14,9 +14,6 @@ namespace py = pybind11;
 
 using namespace YoloApp;
 
-using pt = std::pair<int, int>;
-using pt_pair = std::pair<pt, pt>;
-
 /// a global flag in order to make signal function work
 bool YoloApp::IS_CAPTURE_ENABLED = true;
 const std::vector<char const *> YoloApp::classNames = {
@@ -44,7 +41,7 @@ YoloApp::detectFrame(cv::Mat &detectImg,
                      cv::Mat &drawImg,
                      YoloFastestV2 &api,
                      const std::vector<const char *> &classNames,
-                     std::function<void(const std::vector<TargetBox> &)> cb) {
+                     const std::function<void(const std::vector<TargetBox> &)>& cb) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -91,7 +88,7 @@ auto drawTime(cv::Mat &drawImg) {
 auto YoloApp::detectDoor(cv::Mat &detectImg,
                          cv::Mat &drawImg,
                          cv::Rect cropRect,
-                         std::function<void(const std::vector<pt_pair> &)> cb) {
+                         const std::function<void(const std::vector<pt_pair> &)>& cb) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
@@ -112,7 +109,7 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
       auto angle = abs(atan2(y2 - y1, x2 - x1) * 180 / CV_PI);
       if (angle > 85 && angle < 95) {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
-        door_lines.push_back(make_pair(make_pair(x1, y1), make_pair(x2, y2)));
+        door_lines.emplace_back(make_pair(x1, y1), make_pair(x2, y2));
       } else {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
       }

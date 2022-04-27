@@ -42,7 +42,7 @@ namespace YoloApp {
               cv::Mat &drawImg,
               YoloFastestV2 &api,
               const std::vector<const char *> &classNames,
-              std::function<void(const std::vector<TargetBox> &)> cb);
+              const std::function<void(const std::vector<TargetBox> &)>& cb);
 
   using pt = std::pair<int, int>;
   using pt_pair = std::pair<pt, pt>;
@@ -50,7 +50,7 @@ namespace YoloApp {
   auto detectDoor(cv::Mat &detectImg,
                   cv::Mat &drawImg,
                   cv::Rect cropRect,
-                  std::function<void(const std::vector<pt_pair> &)> cb);
+                  const std::function<void(const std::vector<pt_pair> &)>& cb);
 
   // TODO: disable copy but enable move
   class VideoHandler {
