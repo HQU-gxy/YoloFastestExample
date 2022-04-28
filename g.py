@@ -2,6 +2,8 @@ import os
 import sys
 import asyncio
 import asyncio_dgram
+from gevent import socket
+from gevent.server import DatagramServer
 from toolz import mapcat as flatmap
 
 pwd = os.path.dirname(os.path.realpath(__file__))
@@ -21,8 +23,8 @@ base_pipeline = "appsrc ! " + \
                 "rtmpsink location="
 
 opts_dict = {
-    # "input_file_path": "0",
-    "input_file_path": os.path.join(so_root, "test.mp4"),
+    "input_file_path": "0",
+    # "input_file_path": os.path.join(so_root, "test.mp4"),
     "output_file_path": "",
     "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
     "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
@@ -47,48 +49,35 @@ class UDPApp:
     def __init__(self, remote_host, remote_port, yolo_app):
         self.host = remote_host
         self.port = remote_port
+        address = (remote_host, remote_port)
         # yolo_app is MainWrapper
         self.app = yolo_app
         self.s = None
-        self.q = asyncio.Queue(32)
-        self.loop = asyncio.new_event_loop()
+        self.sock = socket.socket(type=socket.SOCK_DGRAM)
+        self.sock.connect(address)
 
-    async def on_door_async(self, xs):
-        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
+    def on_detect_yolo(self, xs):
+        if xs:
+            for x in xs:
+                pts = [x.x1, x.y1, x.x2, x.y2]
+                byte_list = bytes.fromhex("70") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                self.sock.send(byte_list)
+                print("[yolo] {}".format(byte_list.hex()))
+
+    def on_detect_door(self, xs):
         if xs:
             for x in xs:
                 (x1, y1), (x2, y2) = x
                 pts = [x1, y1, x2, y2]
                 byte_list = bytes.fromhex("80") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
-                await self.s.send(byte_list)
-                await self.q.put((byte_list, "door"))
+                self.sock.send(byte_list)
+                print("[door] {}".format(byte_list.hex()))
 
-    async def on_yolo_async(self, xs):
-        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
-        if xs:
-            for x in xs:
-                pts = [x.x1, x.y1, x.x2, x.y2]
-                byte_list = bytes.fromhex("70") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
-                await self.s.send(byte_list)
-                await self.q.put((byte_list, "yolo"))
-
-    def on_detect_yolo(self, xs):
-        self.loop.run_until_complete(self.on_yolo_async(xs))
-        # asyncio.create_task(test_async(xs))
-
-    def on_detect_door(self, xs):
-        self.loop.run_until_complete(self.on_door_async(xs))
-
-    async def udp_server(self):
-        if self.s is None: self.s = await asyncio_dgram.connect((host, port))
+    def serve_forever(self):
+        # buffer size
         while True:
-            if not(self.q.empty()):
-                # handle req from self (client)
-                d, sender = await self.q.get()
-                print("{} from {}".format(d, sender))
-            # handle req from server
-            data, remote_addr = await self.s.recv()
-            print("{} from {}".format(data, remote_addr))
+            data, address = self.sock.recvfrom(8192)
+            print("[main] {} from {}".format(data.hex(), address))
 
 
 host = "127.0.0.1"
@@ -109,4 +98,5 @@ if __name__ == "__main__":
     main.set_pull_task_state(False)
     main.run_push()
     main.run_pull()
-    loop.run_until_complete(u.udp_server())
+    # loop.run_until_complete()
+    u.serve_forever()
