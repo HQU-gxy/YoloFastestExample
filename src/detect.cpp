@@ -7,6 +7,11 @@
 #include <cmath>
 #include<vector>
 
+#ifndef _STANDALONE_ON
+#include<pybind11/pybind11.h>
+namespace py = pybind11;
+#endif
+
 using namespace YoloApp;
 
 /// a global flag in order to make signal function work
@@ -32,8 +37,11 @@ const std::string YoloApp::base_pipeline = "appsrc ! "
 /// not a pure function, will modify the drawImg
 /// @param classNames  the name of the class to be detected (array of strings)
 std::vector<TargetBox>
-YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
-                     const std::vector<const char *> &classNames) {
+YoloApp::detectFrame(cv::Mat &detectImg,
+                     cv::Mat &drawImg,
+                     YoloFastestV2 &api,
+                     const std::vector<const char *> &classNames,
+                     const std::function<void(const std::vector<TargetBox> &)>& cb) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -61,6 +69,11 @@ YoloApp::detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api,
     cv::rectangle(drawImg, cv::Point(box.x1, box.y1),
                   cv::Point(box.x2, box.y2), cv::Scalar(255, 255, 0), 2, 2, 0);
   }
+  // not sure if this is necessary
+  #ifndef _STANDALONE_ON
+  py::gil_scoped_acquire acquire;
+  #endif
+  cb(boxes);
   return boxes;
 }
 
@@ -72,17 +85,27 @@ auto drawTime(cv::Mat &drawImg) {
               cv::LINE_AA);
 }
 
-auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect) {
+auto YoloApp::detectDoor(cv::Mat &detectImg,
+                         cv::Mat &drawImg,
+                         cv::Rect cropRect,
+                         const std::function<void(const std::vector<pt_pair> &)>& cb) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
 
+  using namespace std;
+  // two pairs of points in a std::pair
+  vector<pt_pair> door_lines;
   cv::GaussianBlur(detectImg, processedImg, cv::Size(5, 5), 0, 0);
   cv::Canny(processedImg, edges, 100, 200);
   cv::HoughLinesP(edges, lines, 0.5, CV_PI / 180, 30, 50, 10);
   if (!lines.empty()) {
     auto newDrawImg = drawImg(cropRect);
-    lines.forEach<cv::Vec4i>([&](cv::Vec4i &line, const int *position) {
+    // use iterator instead of forEach
+    // The big lambda function might cause some problems
+    // See also
+    // https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html#a952ef1a85d70a510240cb645a90efc0d
+    for (auto &line : cv::Mat_<cv::Vec4i>(lines)){
       auto x1 = line[0];
       auto y1 = line[1];
       auto x2 = line[2];
@@ -90,17 +113,17 @@ auto YoloApp::detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect
       auto angle = abs(atan2(y2 - y1, x2 - x1) * 180 / CV_PI);
       if (angle > 85 && angle < 95) {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+        door_lines.emplace_back(make_pair(x1, y1), make_pair(x2, y2));
       } else {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
       }
-    });
+    }
   }
-}
-
-void VideoHandler::setVideoWriter(cv::VideoWriter &writer) {
-  auto original_writer = this->video_writer;
-  this->video_writer = writer;
-  original_writer.release();
+  #ifndef _STANDALONE_ON
+  py::gil_scoped_acquire acquire;
+  #endif
+  cb(door_lines);
+  return door_lines;
 }
 
 void VideoHandler::setOpts(const YoloApp::Options &opts) {
@@ -108,8 +131,8 @@ void VideoHandler::setOpts(const YoloApp::Options &opts) {
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
-                                    const std::string pipeline) {
+YoloApp::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
+                             const std::string pipeline) {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
   const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
   const int frame_fps = cap.get(cv::CAP_PROP_FPS);
@@ -119,16 +142,15 @@ VideoHandler::getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Option
 }
 
 cv::VideoWriter
-VideoHandler::getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                                    const std::string pipeline) {
-  auto [frame_width, frame_height, frame_fps] = props;
+YoloApp::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+                             const std::string pipeline) {
+  auto[frame_width, frame_height, frame_fps] = props;
   auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
   return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
                          cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
 
-
-YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
+YoloApp::CapProps YoloApp::getCapProps(cv::VideoCapture &cap) {
   return {
       cap.get(cv::CAP_PROP_FRAME_WIDTH),
       cap.get(cv::CAP_PROP_FRAME_HEIGHT),
@@ -137,9 +159,9 @@ YoloApp::CapProps VideoHandler::getCapProps(cv::VideoCapture &cap) {
 }
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
-VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                            const std::vector<const char *> classNames, const YoloApp::Options opts)
-    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts}, video_writer{writer} {}
+    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {}
 
 int VideoHandler::run() {
   const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -156,7 +178,7 @@ int VideoHandler::run() {
   spdlog::debug("Original video fps: {}", frame_fps);
   spdlog::debug("Output video fps: {}", out_framerate);
   spdlog::debug("Original video frame count: {}", frame_count);
-  redis.del("image");
+  redis.del("image"); // TODO: why the key of redis is hardcoded
   while (YoloApp::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
@@ -175,12 +197,13 @@ int VideoHandler::run() {
     auto origImg = cvImgResized.clone();
     auto croppedImg = cvImgResized(cropRect);
 
-    detectDoor(croppedImg, cvImgResized, cropRect);
+    detectDoor(croppedImg, cvImgResized, cropRect, onDetectDoor);
     cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
-    auto boxes = detectFrame(origImg, cvImgResized, api, classNames);
+    auto boxes = detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
     drawTime(cvImgResized);
 
-    if (opts.isRedis) {
+
+    if (this->isWriteRedis) {
       // uchar = unsigned char
       std::vector<uchar> buf;
       auto success = cv::imencode(".png", cvImgResized, buf);
@@ -202,51 +225,52 @@ int VideoHandler::run() {
         spdlog::error("Failed to encode image");
         throw std::runtime_error("Failed to encode image");
       }
-    } else {
-      video_writer.write(cvImgResized);
     }
 
     auto end = ncnn::get_current_time();
 
     real_frame_count++;
     if (frame_count > 0) {
-      spdlog::info("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
+      spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
     } else {
-      spdlog::info("[{}]\t{} ms", real_frame_count, end - start);
+      spdlog::debug("[{}]\t{} ms", real_frame_count, end - start);
     }
   }
   return YoloApp::Error::SUCCESS;
 }
 
-PullTask::PullTask(cv::VideoWriter &writer) : writer{writer} {}
+// intended to use copy instead of reference
+PullTask::PullTask(cv::VideoWriter writer) : writer{writer} {}
 
 void PullTask::run(Options opts, sw::redis::Redis &redis) {
   while (YoloApp::IS_CAPTURE_ENABLED) {
-    //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
-    /// It's wasteful to copy the data, but it's the only way to get the data
-    /// without causing problems.
-    /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-    auto redisMemory = redis.brpop("image", 0)
-        .value_or(std::make_pair("", ""))
-        .second;
-    if (redisMemory.empty()) {
-      continue;
+    if (this->isReadRedis) {
+      //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
+      /// It's wasteful to copy the data, but it's the only way to get the data
+      /// without causing problems.
+      /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
+      auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
+          .value_or(std::make_pair("", ""))
+          .second;
+      if (redisMemory.empty()) {
+        continue;
+      }
+      auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
+      // spdlog::debug("Received Vector Length: {}", vector.size());
+      auto start = ncnn::get_current_time();
+      auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
+      if (image.empty()) {
+        spdlog::error("Failed to decode image");
+        throw std::runtime_error("Failed to decode image");
+      }
+      writer.write(image);
+      auto end = ncnn::get_current_time();
+      spdlog::debug("[Pull]\t{} ms", end - start);
     }
-    auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
-    // spdlog::debug("Received Vector Length: {}", vector.size());
-    auto start = ncnn::get_current_time();
-    auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
-    if (image.empty()) {
-      spdlog::error("Failed to decode image");
-      throw std::runtime_error("Failed to decode image");
-    }
-    writer.write(image);
-    auto end = ncnn::get_current_time();
-    spdlog::debug("[Pull]\t{} ms", end - start);
   }
 }
 
-void PullTask::setVideoWriter(cv::VideoWriter &writer) {
+void PullTask::setVideoWriter(cv::VideoWriter writer) {
   auto original_writer = this->writer;
   this->writer = writer;
   original_writer.release();
@@ -256,8 +280,10 @@ const Options &VideoHandler::getOpts() const {
   return opts;
 }
 
-// I expected to copy
-cv::VideoWriter VideoHandler::getVideoWriter() const {
-  auto temp = video_writer;
-  return temp;
+void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
+  VideoHandler::onDetectDoor = onDetectDoor;
+}
+
+void VideoHandler::setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
+  VideoHandler::onDetectYolo = onDetectYolo;
 }

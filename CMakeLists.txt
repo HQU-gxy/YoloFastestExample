@@ -8,6 +8,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV REQUIRED)
 
+
+
+## Pybind11
+## https://pybind11.readthedocs.io/en/latest/compiling.html#building-with-cmake
+set(PYBIND11_DIR lib/pybind11)
+add_subdirectory(${PYBIND11_DIR})
+
+# No idea why this broken
+# See https://cmake.org/cmake/help/latest/module/FindPython3.html#module:FindPython3
+#find_package(Python3 COMPONENTS Interpreter Development)
+#if (NOT PYTHON3_FOUND)
+#    message(FATAL_ERROR "Python3 is required to build this project")
+#endif()
+#message(STATUS "Python_VERSION = ${Python_VERSION}")
+#message(STATUS "Python3_INCLUDE_DIR = ${PYTHON3_INCLUDE_DIR}")
+#message(STATUS "Python3_LIBRARY = ${PYTHON3_LIBRARY}")
+
+# python-config --includes
+# -I/usr/include/python3.10 -I/usr/include/python3.10
+set(Python3_INCLUDE_DIR /usr/include/python3.10)
+include_directories(${Python3_INCLUDE_DIR})
+set(Python3_LIBRARY /usr/lib/libpython3.10.so)
+
 # target spdlog
 # you can just comment this line if you want to system library
 if (WITH_SPDLOG)
@@ -55,46 +78,6 @@ endif ()
 # pkg_check_modules(GST_APP REQUIRED gstreamer-app-1.0)
 # pkg_check_modules(GST_VIDEO REQUIRED gstreamer-video-1.0)
 
-# from https://github.com/cpm-cmake/CPM.cmake/blob/master/examples/asio-standalone/CMakeLists.txt
-# ASIO
-set(asio_SOURCE_DIR lib/asio)
-
-find_package(Threads REQUIRED)
-add_library(asio INTERFACE)
-target_include_directories(asio SYSTEM INTERFACE ${asio_SOURCE_DIR}/asio/include)
-target_compile_definitions(asio INTERFACE ASIO_STANDALONE ASIO_NO_DEPRECATED)
-target_link_libraries(asio INTERFACE Threads::Threads)
-
-# I don't think anyone will run this on Windows
-# I still leave this piece of code here for reference
-if (WIN32)
-    # macro see @ https://stackoverflow.com/a/40217291/1746503
-    macro(get_win32_winnt version)
-        if (CMAKE_SYSTEM_VERSION)
-            set(ver ${CMAKE_SYSTEM_VERSION})
-            string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
-            string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
-            # Check for Windows 10, b/c we'll need to convert to hex 'A'.
-            if ("${verMajor}" MATCHES "10")
-                set(verMajor "A")
-                string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
-            endif ("${verMajor}" MATCHES "10")
-            # Remove all remaining '.' characters.
-            string(REPLACE "." "" ver ${ver})
-            # Prepend each digit with a zero.
-            string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
-            set(${version} "0x${ver}")
-        endif ()
-    endmacro()
-
-    if (NOT DEFINED _WIN32_WINNT)
-        get_win32_winnt(ver)
-        set(_WIN32_WINNT ${ver})
-    endif ()
-
-    message(STATUS "Set _WIN32_WINNET=${_WIN32_WINNT}")
-    target_compile_definitions(asio INTERFACE _WIN32_WINNT=${_WIN32_WINNT} WIN32_LEAN_AND_MEAN)
-endif ()
 
 # NCNN
 # I have copied the libs from /ncnn/build/install to /usr/local
@@ -114,7 +97,14 @@ set(YOLO_FASTEST_INCLUDE_DIRS lib/yolo/include)
 set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_INCLUDE_DIRS src/include)
-set(MAIN_SRC src/main.cpp src/utils.cpp src/detect.cpp src/include/VideoInterface.h src/VideoInterface.cpp)
+set(MAIN_SRC
+        src/main.cpp
+        src/utils.cpp
+        src/detect.cpp
+        src/include/VideoInterface.h
+        src/VideoInterface.cpp
+        src/MainWrapper.cpp
+        src/include/MainWrapper.h)
 
 # The named <target> must have been created by a command such as add_executable()
 # or add_library() and must not be an ALIAS target.
@@ -140,4 +130,22 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_I
 target_link_libraries(Yolo-FastestV2 ${NCNN_LIBS})
 target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
 target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
-target_link_libraries(Yolo-FastestV2 asio)
+target_link_libraries(Yolo-FastestV2 ${Python3_LIBRARY})
+
+# See src/MainWrapper.cpp for the usage of this variable
+# some part of code won't be used in python bindings
+target_compile_definitions(Yolo-FastestV2 PRIVATE -D_STANDALONE_ON=1)
+
+set(PY_BIND_SRC
+        bind/bind.cpp)
+
+# Remember to select a new target in CLion
+pybind11_add_module(yolo_app
+        ${PY_BIND_SRC}
+        ${MAIN_SRC}
+        ${YOLO_FASTEST_SRC})
+target_link_libraries(yolo_app PRIVATE ${OpenCV_LIBS})
+target_link_libraries(yolo_app PRIVATE ${HIREDIS_LIB})
+target_link_libraries(yolo_app PRIVATE ${REDIS_PLUS_PLUS_LIB})
+target_link_libraries(yolo_app PRIVATE ${NCNN_LIBS})
+#target_link_libraries(yolo_app PRIVATE spdlog::spdlog)

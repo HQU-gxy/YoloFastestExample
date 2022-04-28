@@ -7,9 +7,6 @@
 [submodule "lib/date"]
 	path = lib/date
 	url = https://github.com/HowardHinnant/date
-[submodule "lib/asio"]
-	path = lib/asio
-	url = https://github.com/chriskohlhoff/asio
 [submodule "lib/rpp"]
 	path = lib/rpp
 	url = https://github.com/sewenew/redis-plus-plus
@@ -19,3 +16,6 @@
 [submodule "lib/hiredis"]
 	path = lib/hiredis
 	url = https://github.com/redis/hiredis
+[submodule "lib/pybind11"]
+	path = lib/pybind11
+	url = https://github.com/pybind/pybind11

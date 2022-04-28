@@ -17,6 +17,7 @@ namespace YoloApp {
     SUCCESS = 0,
     FAILURE = 1
   };
+
   extern bool IS_CAPTURE_ENABLED;
   extern const std::vector<char const *> classNames;
   extern const std::string base_pipeline;
@@ -27,9 +28,7 @@ namespace YoloApp {
     // Maybe I should use the exact coordinate
     float cropCoeffs = 0.1;
     float outFps = 5;
-    bool isRtmp = false;
     bool isDebug = false;
-    bool isRedis = true;
   };
 
   struct CapProps {
@@ -39,20 +38,40 @@ namespace YoloApp {
   };
 
   std::vector<TargetBox>
-  detectFrame(cv::Mat &detectImg, cv::Mat &drawImg, YoloFastestV2 &api, const std::vector<const char *> &classNames);
+  detectFrame(cv::Mat &detectImg,
+              cv::Mat &drawImg,
+              YoloFastestV2 &api,
+              const std::vector<const char *> &classNames,
+              const std::function<void(const std::vector<TargetBox> &)>& cb);
 
-  auto detectDoor(cv::Mat &detectImg, cv::Mat &drawImg, cv::Rect cropRect);
+  using pt = std::tuple<int, int>;
+  using pt_pair = std::tuple<pt, pt>;
+
+  auto detectDoor(cv::Mat &detectImg,
+                  cv::Mat &drawImg,
+                  cv::Rect cropRect,
+                  const std::function<void(const std::vector<pt_pair> &)>& cb);
 
   // TODO: disable copy but enable move
   class VideoHandler {
   private:
+    std::function<void(const std::vector<pt_pair> &)> onDetectDoor = [](const std::vector<pt_pair> &) {};
+    std::function<void(const std::vector<TargetBox> &)> onDetectYolo = [](const std::vector<TargetBox> &) {};
+//    std::function<void(const std::string &)> onError = [](const std::string &) {};
+//    std::function<void(const std::string &)> onInfo = [](const std::string &) {};
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
-    cv::VideoWriter &video_writer;
+//    cv::VideoWriter &video_writer;
   public:
+    void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
+
+    void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
+
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
+    bool isWriteRedis = true;
+    bool isWriteVideoWriter = false;
   public:
     cv::VideoWriter getVideoWriter() const;
 
@@ -60,31 +79,38 @@ namespace YoloApp {
 
     void setOpts(const YoloApp::Options &opts);
 
-    void setVideoWriter(cv::VideoWriter &writer);
-
-    static cv::VideoWriter
-    getInitialVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
-
-    static cv::VideoWriter
-    getInitialVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                                        const std::string pipeline);
+    void setVideoWriter(cv::VideoWriter writer);
 
 
-    static YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
-
-    VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, cv::VideoWriter &writer, sw::redis::Redis &redis,
+    VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                  const std::vector<const char *> classNames, const YoloApp::Options opts);
 
     int run();
+
+    void setVideoWriter(const std::string &pipeline);
   };
+
   class PullTask {
   private:
-    cv::VideoWriter &writer;
+    cv::VideoWriter writer;
   public:
-    void setVideoWriter(cv::VideoWriter &writer);
-    PullTask(cv::VideoWriter &writer);
-    void run(Options opts, sw::redis::Redis& redis);
+    bool isReadRedis = false;
+
+    void setVideoWriter(cv::VideoWriter writer);
+
+    PullTask(cv::VideoWriter writer);
+
+    void run(Options opts, sw::redis::Redis &redis);
   };
+
+  cv::VideoWriter
+  newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
+
+  cv::VideoWriter
+  newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
+                 const std::string pipeline);
+
+  YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 }
 
 
