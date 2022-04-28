@@ -12,9 +12,6 @@ namespace m = YoloApp::Main;
 namespace r = sw::redis;
 namespace y = YoloApp;
 
-using pt = std::pair<int, int>;
-using pt_pair = std::pair<pt, pt>;
-
 PYBIND11_MODULE(yolo_app, m) {
   m.doc() = R"pbdoc(
           Pybind11 example plugin

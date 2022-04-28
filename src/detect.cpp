@@ -101,7 +101,11 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
   cv::HoughLinesP(edges, lines, 0.5, CV_PI / 180, 30, 50, 10);
   if (!lines.empty()) {
     auto newDrawImg = drawImg(cropRect);
-    lines.forEach<cv::Vec4i>([&](cv::Vec4i &line, const int *position) {
+    // use iterator instead of forEach
+    // The big lambda function might cause some problems
+    // See also
+    // https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html#a952ef1a85d70a510240cb645a90efc0d
+    for (auto &line : cv::Mat_<cv::Vec4i>(lines)){
       auto x1 = line[0];
       auto y1 = line[1];
       auto x2 = line[2];
@@ -109,12 +113,11 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
       auto angle = abs(atan2(y2 - y1, x2 - x1) * 180 / CV_PI);
       if (angle > 85 && angle < 95) {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
-        spdlog::debug("Points: {}, {}, {}, {}", x1, y1, x2, y2);
         door_lines.emplace_back(make_pair(x1, y1), make_pair(x2, y2));
       } else {
         cv::line(newDrawImg, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
       }
-    });
+    }
   }
   #ifndef _STANDALONE_ON
   py::gil_scoped_acquire acquire;

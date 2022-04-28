@@ -33,7 +33,7 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": True,
+    "is_debug": False,
 }
 
 # stream
@@ -48,6 +48,7 @@ class UDPApp:
         self.app = yolo_app
         self.s = None
         self.q = asyncio.Queue(32)
+        self.loop = asyncio.new_event_loop()
 
     async def on_door_async(self, xs):
         if self.s is None: self.s = await asyncio_dgram.connect((host, port))
@@ -68,6 +69,13 @@ class UDPApp:
                 await self.s.send(byte_list)
                 await self.q.put((byte_list, "yolo"))
 
+    def on_detect_yolo(self, xs):
+        self.loop.run_until_complete(self.on_yolo_async(xs))
+        # asyncio.create_task(test_async(xs))
+
+    def on_detect_door(self, xs):
+        self.loop.run_until_complete(self.on_door_async(xs))
+
     async def udp_server(self):
         if self.s is None: self.s = await asyncio_dgram.connect((host, port))
         while True:
@@ -75,13 +83,9 @@ class UDPApp:
                 # handle req from self (client)
                 d, sender = await self.q.get()
                 print("{} from {}".format(d, sender))
-                # TODO: set timeout
-                data, remote_addr = await self.s.recv()
-                print("{} from {}".format(data, remote_addr))
-            else:
-                # handle req from server
-                data, remote_addr = await self.s.recv()
-                print("Empty {} from {}".format(data, remote_addr))
+            # handle req from server
+            data, remote_addr = await self.s.recv()
+            print("{} from {}".format(data, remote_addr))
 
 
 host = "127.0.0.1"
@@ -91,24 +95,13 @@ port = 12345
 loop = asyncio.new_event_loop()
 # set_on_detect_yolo callback
 # no idea whether addition event_loop is necessary
-loop_cb = asyncio.new_event_loop()
-
-
-def on_detect_yolo(xs):
-    loop_cb.run_until_complete(u.on_yolo_async(xs))
-    # asyncio.create_task(test_async(xs))
-
-
-def on_detect_door(xs):
-    loop_cb.run_until_complete(u.on_door_async(xs))
-
 
 opts = yolo_app.init_options(opts_dict)
 main = yolo_app.MainWrapper(opts)
 main.init()
 u = UDPApp(host, port, main)
-main.set_on_detect_yolo(on_detect_yolo)
-main.set_on_detect_door(on_detect_door)
+main.set_on_detect_yolo(u.on_detect_yolo)
+main.set_on_detect_door(u.on_detect_door)
 main.set_pull_task_state(False)
 main.run_push()
 main.run_pull()
