@@ -1,10 +1,9 @@
 import os
+import time
 import sys
-import asyncio
-import asyncio_dgram
 from gevent import socket
-from gevent.server import DatagramServer
 from toolz import mapcat as flatmap
+from e_helper import *
 
 pwd = os.path.dirname(os.path.realpath(__file__))
 print(pwd)
@@ -35,7 +34,7 @@ opts_dict = {
     "out_fps": 5,
     "crop_coeffs": 0.1,
     "threads_num": 4,
-    "is_debug": False,
+    "is_debug": True,
 }
 
 # https://www.gevent.org/examples/udp_client.html
@@ -51,8 +50,8 @@ class UDPApp:
         self.port = remote_port
         address = (remote_host, remote_port)
         # yolo_app is MainWrapper
+        self.hash = None
         self.app = yolo_app
-        self.s = None
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.connect(address)
 
@@ -60,18 +59,20 @@ class UDPApp:
         if xs:
             for x in xs:
                 pts = [x.x1, x.y1, x.x2, x.y2]
-                byte_list = bytes.fromhex("70") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                byte_list = bytes.fromhex("70") + \
+                    bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
                 self.sock.send(byte_list)
-                print("[yolo] {}".format(byte_list.hex()))
+                print("[yolo] send {}".format(byte_list.hex()))
 
     def on_detect_door(self, xs):
         if xs:
             for x in xs:
                 (x1, y1), (x2, y2) = x
                 pts = [x1, y1, x2, y2]
-                byte_list = bytes.fromhex("80") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                byte_list = bytes.fromhex("80") + \
+                    bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
                 self.sock.send(byte_list)
-                print("[door] {}".format(byte_list.hex()))
+                print("[door] send {}".format(byte_list.hex()))
 
     def serve_forever(self):
         # buffer size
@@ -83,20 +84,14 @@ class UDPApp:
 host = "127.0.0.1"
 port = 12345
 
-# main event_loop
-loop = asyncio.new_event_loop()
-# set_on_detect_yolo callback
-# no idea whether addition event_loop is necessary
-
 if __name__ == "__main__":
     opts = yolo_app.init_options(opts_dict)
     main = yolo_app.MainWrapper(opts)
     main.init()
     u = UDPApp(host, port, main)
-    main.set_on_detect_yolo(u.on_detect_yolo)
-    main.set_on_detect_door(u.on_detect_door)
-    main.set_pull_task_state(False)
+    # main.set_on_detect_yolo(u.on_detect_yolo)
+    # main.set_on_detect_door(u.on_detect_door)
+    main.set_pull_task_state(True)
     main.run_push()
     main.run_pull()
-    # loop.run_until_complete()
-    u.serve_forever()
+    # u.serve_forever()

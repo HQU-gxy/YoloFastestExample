@@ -66,6 +66,19 @@ namespace YoloApp::Main {
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
 
     void setPullTaskState(bool isRunning);
+
+    bool setMaxPoll(int max);
+
+    bool getPullTaskState();
+
+    int getPoll();
+    int getMaxPoll();
+
+    void setOnPollComplete(const std::function<void(int)> &onPollComplete);
+
+    void resetPoll(std::string pipeline);
+
+    void startPoll();
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

@@ -95,6 +95,9 @@ namespace YoloApp {
     cv::VideoWriter writer;
   public:
     bool isReadRedis = false;
+    int  maxPoll = 1500;
+    int  poll = 0;
+    std::function<void(const int &)> onPollComplete = [](const int &) {};
 
     void setVideoWriter(cv::VideoWriter writer);
 

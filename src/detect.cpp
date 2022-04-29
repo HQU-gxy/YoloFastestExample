@@ -265,7 +265,12 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
       }
       writer.write(image);
       auto end = ncnn::get_current_time();
-      spdlog::debug("[Pull]\t{} ms", end - start);
+      spdlog::debug("[Pull/{}]\t{} ms", this->poll, end - start);
+      poll++;
+      if (poll > this->maxPoll) {
+        isReadRedis = false;
+        this->onPollComplete(this->poll);
+      }
     }
   }
 }

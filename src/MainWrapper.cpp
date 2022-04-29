@@ -3,6 +3,8 @@
 
 #include "MainWrapper.h"
 
+int getPoll();
+
 namespace m = YoloApp::Main;
 namespace r = sw::redis;
 namespace y = YoloApp;
@@ -139,6 +141,59 @@ void YoloApp::Main::MainWrapper::setPullTaskState(bool isRunning) {
     throw std::runtime_error("pullJob is uninitialized");
   }
   this->pullJob->isReadRedis = isRunning;
+}
+
+bool YoloApp::Main::MainWrapper::getPullTaskState() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  return this->pullJob->isReadRedis;
+}
+
+bool m::MainWrapper::setMaxPoll(int max) {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  if (max < 0) {
+    return false;
+  }
+  this->pullJob->maxPoll = max;
+  return true;
+}
+
+// set the pull job writer to pipeline and stop the pull job
+void m::MainWrapper::resetPoll(std::string pipeline){
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  this->swapPullWriter(pipeline);
+  this->pullJob->poll = 0;
+  this->pullJob->isReadRedis = false;
+}
+
+int m::MainWrapper::getMaxPoll() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  return this->pullJob->maxPoll;
+}
+
+int m::MainWrapper::getPoll() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  return this->pullJob->poll;
+}
+
+void m::MainWrapper::startPoll() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  this->pullJob->isReadRedis = true;
+}
+
+void m::MainWrapper::setOnPollComplete(const std::function<void(int)> &onPollComplete) {
+  this->pullJob->onPollComplete = onPollComplete;
 }
 
 y::Options m::toVideoOptions(const m::Options &opts){
