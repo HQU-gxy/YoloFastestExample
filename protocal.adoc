@@ -67,7 +67,7 @@ Request sends from client to server. The client can use it later when the emerge
 | meaning      | length | type | range      | comment
 
 | Message type | 1      | -      | 0x77       | -
-| Hash         | 4      | hash | -          | you can interpret it as uint32
+| Hash         | 4      | hash | -          | you can interpret it as uint32 
 
 |===
 
@@ -79,7 +79,7 @@ Request sends from client to server. The client can use it later when the emerge
 
 | Message type | 1      | -    | 0x77         | -
 | Hash         | 4      | hash | -            | you can interpret it as uint32
-| RTMP Session | 2      | uint16 | 49152 - 65535  | client can open a RTMP session on that link. start with 0b11xxxxx...
+| RTMP Channel | 2      | uint16 | 49152 - 65535  | client can open a RTMP session on that link. start with `0b11xxxxxx` send channel to rtmp as hex string
 
 |===
 
@@ -97,7 +97,7 @@ Request sends from server to client.
 
 | Message type | 1      | -      | 0x75       | -
 | Hash         | 4      | hash   | -          | -
-| RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with 0b00xxxxx...
+| RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with `0b00xxxxxx` send channel to rtmp as hex string
 
 |===
 
@@ -122,6 +122,7 @@ Request sends from server to client.
 | meaning      | length | type | range      | comment
 
 | Message type | 1      | -      | 0x64     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
 
 |===
 
@@ -138,6 +139,7 @@ No Response
 | 0x00        | Error      | General error
 
 |===
+
 
 
 ## HTTP and WebSocket

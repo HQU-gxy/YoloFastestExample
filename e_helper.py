@@ -18,7 +18,7 @@ class MsgStruct(Enum):
   RTMP_STREAM_SERVER = ">BIH" # type hash chann
   RTMP_STREAM_CLIENT = ">BIB" # type hash reason
 
-  HEARTBEAT_CLIENT = ">B" # type
+  HEARTBEAT_CLIENT = ">BI" # type hash
 
 class Code(Enum):
   OK = bytes.fromhex("ff")[0]

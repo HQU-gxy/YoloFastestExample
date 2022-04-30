@@ -70,7 +70,6 @@ def int_to_bytes(x: int, n=2):
   """big endian"""
   return x.to_bytes(n, byteorder='big')
 
-
 class UDPApp:
   def __init__(self, remote_host: str, remote_port: int, yolo_app, id: int):
     self.id = id
@@ -117,10 +116,14 @@ class UDPApp:
   def handle_req(self, msg: bytes):
     match list(msg):
       case [MsgType.INIT.value, *rest]:
-        hash: int
-        _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
-        self.hash = hash
-        logging.info("set hash as {}".format(self.hash.hex()))
+        try: 
+          hash: int
+          _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
+          self.hash = hash
+          logging.info("set hash as {}".format(self.hash.hex()))
+        except:
+          logging.error("unpack hash error")
+          raise Exception("Can't get hash")
       case [MsgType.RTMP_EMERG.value, *rest]:
         hash: int
         chan: int
@@ -129,6 +132,7 @@ class UDPApp:
           self.e_chan = chan
           logging.info("set channel as {}".format(self.e_chan))
       case [MsgType.RTMP_STREAM.value, *rest]:
+        head: int
         hash: int
         chan: int
         head, hash, chan = struct.unpack(MsgStruct.RTMP_STREAM_SERVER.value, msg)
@@ -160,10 +164,15 @@ class UDPApp:
                       self.id)
     self.sock.send(req)
 
+  def receive_once(self):
+    # hopefully it will block here
+    msg = self.sock.recv(1024)
+    self.handle_req(msg)
+
   def serve_forever(self):
     # buffer size 8192 bytes
     while True:
-      data, address = self.sock.recvfrom(8192)
+      data, address = self.sock.recvfrom(1024)
       self.handle_req(data)
       logging.info("Msg {} from {}".format(data.hex(), address))
 
@@ -180,6 +189,7 @@ if __name__ == "__main__":
   main.set_on_detect_door(u.on_detect_door)
   main.set_on_poll_complete(u.on_poll_complete)
   u.send_init_req()
+  u.receive_once()
   main.run_push()
   main.run_pull()
   main.enable_poll()
