@@ -78,7 +78,7 @@ namespace YoloApp::Main {
 
     void resetPoll(std::string pipeline);
 
-    void startPoll();
+    void enablePoll();
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

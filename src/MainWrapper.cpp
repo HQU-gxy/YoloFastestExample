@@ -185,7 +185,7 @@ int m::MainWrapper::getPoll() {
   return this->pullJob->poll;
 }
 
-void m::MainWrapper::startPoll() {
+void m::MainWrapper::enablePoll() {
   if (this->pullJob == nullptr) {
     throw std::runtime_error("pullJob is uninitialized");
   }

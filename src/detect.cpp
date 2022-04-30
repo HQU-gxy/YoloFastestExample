@@ -212,7 +212,7 @@ int VideoHandler::run() {
       if (success) {
         auto len = redis.llen("image");
         // 1500 is the max length of the queue
-        // I shouldn't use magic number
+        // TODO I shouldn't use magic number
         if (len < 1500) {
           // spdlog::debug("Redis List length: {}", len);
           // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu

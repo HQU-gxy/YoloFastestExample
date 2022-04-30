@@ -1,4 +1,3 @@
-import yolo_app
 import os
 import time
 import sys
@@ -16,6 +15,8 @@ so_root = os.path.join(pwd, 'cmake-build-debug')
 print(so_root)
 sys.path.insert(0, so_root)
 
+import yolo_app
+
 base_rtmp_url = "rtmp://localhost:1935/live/"
 
 opts_dict = {
@@ -31,8 +32,12 @@ opts_dict = {
   "out_fps": 5,
   "crop_coeffs": 0.1,
   "threads_num": 4,
-  "is_debug": True,
+  "is_debug": False,
 }
+
+logging.basicConfig()
+if (opts_dict.get("is_debug")):
+  logging.getLogger().setLevel(logging.DEBUG)
 
 base_pipeline = "appsrc ! " + \
                 "videoconvert ! " + \
@@ -138,9 +143,9 @@ class UDPApp:
             self.sock.send(resp)
           else:
             logging.warn("Pull Task is busy")
-            resp = bytes(MsgType.RTMP_STREAM.value, ) + \
+            resp = bytes([MsgType.RTMP_STREAM.value]) + \
                     self.hash + \
-                    bytes(Code.BUSY.value)
+                    bytes([Code.BUSY.value])
             self.sock.send(resp)
       case _:
         logging.warn("Invalid message {}".format(msg.hex()))
@@ -164,11 +169,13 @@ if __name__ == "__main__":
   main = yolo_app.MainWrapper(opts)
   main.init()
   u = UDPApp(host, port, main, 123)
-  # main.set_on_detect_yolo(u.on_detect_yolo)
-  # main.set_on_detect_door(u.on_detect_door)
+  main.set_on_detect_yolo(u.on_detect_yolo)
+  main.set_on_detect_door(u.on_detect_door)
+  main.set_on_poll_complete(u.on_poll_complete)
   u.send_init_req()
-  main.set_pull_task_state(True)
   main.run_push()
   main.run_pull()
+  main.enable_poll()
+  main.set_max_poll(60)
   u.serve_forever()
 
