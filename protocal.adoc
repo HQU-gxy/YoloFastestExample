@@ -122,7 +122,6 @@ Request sends from server to client.
 | meaning      | length | type | range      | comment
 
 | Message type | 1      | -      | 0x64     | -
-| Hash         | 4      | hash | -          | you can interpret it as uint32
 
 |===
 

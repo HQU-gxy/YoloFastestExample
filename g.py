@@ -7,6 +7,7 @@ from e_helper import *
 from typing import List, TypeVar
 import hy
 import logging
+import struct
 # https://docs.python.org/3/howto/logging.html
 
 pwd = os.path.dirname(os.path.realpath(__file__))
@@ -69,10 +70,6 @@ def int_to_bytes(x: int, n=2):
   """big endian"""
   return x.to_bytes(n, byteorder='big')
 
-def gen_init_msg(id: int):
-  """id should be int. this function will convert it to bytes"""
-  id_bytes = int_to_bytes(id)
-  return MsgType.INIT.value.to_bytes(1, 'big', signed = False) + id_bytes
 
 class UDPApp:
   def __init__(self, remote_host: str, remote_port: int, yolo_app, id: int):
@@ -81,8 +78,8 @@ class UDPApp:
     self.port = remote_port
     address = (remote_host, remote_port)
     # yolo_app is MainWrapper
-    self.hash:   None | bytes = None
-    self.e_chn:  None | bytes = None
+    self.hash:   None  | int = None
+    self.e_chan:  None | int = None
     self.app = yolo_app
     self.sock = socket.socket(type=socket.SOCK_DGRAM)
     self.sock.connect(address)
@@ -115,43 +112,53 @@ class UDPApp:
   def on_poll_complete(self, poll):
     logging.debug("poll completes! frame count {}".format(poll))
 
+  # https://docs.python.org/3/library/struct.html
+  # https://www.educative.io/edpresso/what-is-the-python-struct-module
   def handle_req(self, msg: bytes):
     match list(msg):
       case [MsgType.INIT.value, *rest]:
-        self.hash = bytes(take(rest, ElemLen.HASH.value))
+        hash: int
+        _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
+        self.hash = hash
         logging.info("set hash as {}".format(self.hash.hex()))
       case [MsgType.RTMP_EMERG.value, *rest]:
-        hash = bytes(take(rest, ElemLen.HASH.value))
-        rest = drop(rest, ElemLen.HASH.value)
+        hash: int
+        chan: int
+        _h, hash, chan = struct.unpack(MsgStruct.RTMP_EMERG_SERVER.value, msg)
         if (self.hash and self.hash == hash):
-          self.e_chn = bytes(take(rest, ElemLen.RTMP_CHN.value))
-          logging.info("set channel as {}".format(bytes_to_uint_str(self.e_chn)))
+          self.e_chan = chan
+          logging.info("set channel as {}".format(self.e_chan))
       case [MsgType.RTMP_STREAM.value, *rest]:
-        hash = bytes(take(rest, ElemLen.HASH.value))
-        rest = drop(rest, ElemLen.HASH.value)
+        hash: int
+        chan: int
+        head, hash, chan = struct.unpack(MsgStruct.RTMP_STREAM_SERVER.value, msg)
         if (self.hash and self.hash == hash):
-          chn = bytes(take(rest, ElemLen.RTMP_CHN.value))
-          chn_s = bytes_to_uint_str(chn)
+          chn_s = str(chan)
           logging.info("Receive RTMP Channel {}".format(chn_s))
           if (self.main.get_pull_task_state() == False):
             self.main.reset_poll(chn_s)
             self.main.start_poll()
             logging.info("Start RTMP to {}".format(chn_s))
-            resp = bytes([MsgType.RTMP_STREAM.value]) + \
-                    self.hash + \
-                    bytes([Code.OK.value])
+            resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
+                                head, 
+                                hash, 
+                                Code.OK.value)
             self.sock.send(resp)
           else:
             logging.warn("Pull Task is busy")
-            resp = bytes([MsgType.RTMP_STREAM.value]) + \
-                    self.hash + \
-                    bytes([Code.BUSY.value])
+            resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
+                                head, 
+                                hash, 
+                                Code.BUSY.value)
             self.sock.send(resp)
       case _:
         logging.warn("Invalid message {}".format(msg.hex()))
 
   def send_init_req(self):
-    self.sock.send(gen_init_msg(self.id))
+    req = struct.pack(MsgStruct.INIT_CLIENT.value, 
+                      MsgType.INIT.value, 
+                      self.id)
+    self.sock.send(req)
 
   def serve_forever(self):
     # buffer size 8192 bytes
