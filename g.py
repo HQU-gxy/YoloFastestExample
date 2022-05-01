@@ -1,3 +1,4 @@
+from operator import is_
 import os
 import time
 import sys
@@ -23,6 +24,8 @@ import yolo_app
 
 base_rtmp_url = "rtmp://localhost:1935/live/"
 
+is_debug = False
+
 opts_dict = {
   "input_file_path": "0",
   # "input_file_path": os.path.join(so_root, "test.mp4"),
@@ -36,13 +39,15 @@ opts_dict = {
   "out_fps": 5,
   "crop_coeffs": 0.1,
   "threads_num": 4,
-  "is_debug": False,
+  "is_debug": is_debug,
 }
 
 
-
-os.environ["LOGURU_LEVEL"] =  "DEBUG" if opts_dict.get("is_debug") else "INFO"
-# logger.add(sys.stdout, level="INFO")
+# https://loguru.readthedocs.io/en/stable/resources/recipes.html#changing-the-level-of-an-existing-handler
+# https://github.com/Delgan/loguru/issues/138
+loguru_level =  "DEBUG" if is_debug else "INFO"
+logger.remove()
+logger.add(sys.stderr, level=loguru_level)
 
 base_pipeline = "appsrc ! " + \
                 "videoconvert ! " + \
