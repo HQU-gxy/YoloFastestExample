@@ -29,7 +29,7 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
-      .def("_swap_pull_writer", &m::MainWrapper::swapPullWriter)
+      .def("_set_pull_writer", &m::MainWrapper::setPullWriter)
       .def("_set_pull_task_state", &m::MainWrapper::setPullTaskState)
       .def("get_pull_task_state", &m::MainWrapper::getPullTaskState)
       .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)

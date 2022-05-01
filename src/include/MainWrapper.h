@@ -55,7 +55,7 @@ namespace YoloApp::Main {
     std::thread pullRun();
     std::thread pushRun();
 
-    Error swapPullWriter(std::string pipeline);
+    Error setPullWriter(std::string pipeline);
 
     const Options &getOpts() const;
 

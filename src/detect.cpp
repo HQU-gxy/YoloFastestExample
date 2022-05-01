@@ -8,7 +8,9 @@
 #include<vector>
 
 #ifndef _STANDALONE_ON
+
 #include<pybind11/pybind11.h>
+
 namespace py = pybind11;
 #endif
 
@@ -41,7 +43,7 @@ YoloApp::detectFrame(cv::Mat &detectImg,
                      cv::Mat &drawImg,
                      YoloFastestV2 &api,
                      const std::vector<const char *> &classNames,
-                     const std::function<void(const std::vector<TargetBox> &)>& cb) {
+                     const std::function<void(const std::vector<TargetBox> &)> &cb) {
   std::vector<TargetBox> boxes;
 
   api.detection(detectImg, boxes);
@@ -88,7 +90,7 @@ auto drawTime(cv::Mat &drawImg) {
 auto YoloApp::detectDoor(cv::Mat &detectImg,
                          cv::Mat &drawImg,
                          cv::Rect cropRect,
-                         const std::function<void(const std::vector<pt_pair> &)>& cb) {
+                         const std::function<void(const std::vector<pt_pair> &)> &cb) {
   cv::Mat processedImg;
   cv::Mat edges;
   cv::Mat lines;
@@ -105,7 +107,7 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
     // The big lambda function might cause some problems
     // See also
     // https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html#a952ef1a85d70a510240cb645a90efc0d
-    for (auto &line : cv::Mat_<cv::Vec4i>(lines)){
+    for (auto &line: cv::Mat_<cv::Vec4i>(lines)) {
       auto x1 = line[0];
       auto y1 = line[1];
       auto x2 = line[2];
@@ -124,30 +126,6 @@ auto YoloApp::detectDoor(cv::Mat &detectImg,
   #endif
   cb(door_lines);
   return door_lines;
-}
-
-void VideoHandler::setOpts(const YoloApp::Options &opts) {
-  VideoHandler::opts = opts;
-}
-
-cv::VideoWriter
-YoloApp::newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts,
-                             const std::string pipeline) {
-  const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-  const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-  const int frame_fps = cap.get(cv::CAP_PROP_FPS);
-  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
-}
-
-cv::VideoWriter
-YoloApp::newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                             const std::string pipeline) {
-  auto[frame_width, frame_height, frame_fps] = props;
-  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-  return cv::VideoWriter(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                         cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
 }
 
 YoloApp::CapProps YoloApp::getCapProps(cv::VideoCapture &cap) {
@@ -239,9 +217,6 @@ int VideoHandler::run() {
   return YoloApp::Error::SUCCESS;
 }
 
-// intended to use copy instead of reference
-PullTask::PullTask(cv::VideoWriter writer) : writer{writer} {}
-
 void PullTask::run(Options opts, sw::redis::Redis &redis) {
   while (YoloApp::IS_CAPTURE_ENABLED) {
     if (this->isReadRedis) {
@@ -249,6 +224,13 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
       /// It's wasteful to copy the data, but it's the only way to get the data
       /// without causing problems.
       /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
+      if (!this->writer->isOpened()){
+        spdlog::debug("Opening Video Writer");
+        auto[frame_width, frame_height, frame_fps] = capProps;
+        auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
+        this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+        cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+      }
       auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
           .value_or(std::make_pair("", ""))
           .second;
@@ -263,7 +245,11 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
         spdlog::error("Failed to decode image");
         throw std::runtime_error("Failed to decode image");
       }
-      writer.write(image);
+      if (this->writer == nullptr || !this->writer->isOpened()) {
+        spdlog::error("writer is null. Writing will be skipped");
+      } else {
+        writer->write(image);
+      }
       auto end = ncnn::get_current_time();
       spdlog::debug("[Pull/{}]\t{} ms", this->poll, end - start);
       poll++;
@@ -275,14 +261,16 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
   }
 }
 
-void PullTask::setVideoWriter(cv::VideoWriter writer) {
-  auto original_writer = this->writer;
-  this->writer = writer;
-  original_writer.release();
-}
+PullTask::PullTask(CapProps capProps, Options opts) : capProps(capProps), opts(opts) {}
 
-const Options &VideoHandler::getOpts() const {
-  return opts;
+void PullTask::setVideoWriter(std::string pipeline) {
+  this->pipeline = pipeline;
+  if (this->writer != nullptr && this->writer->isOpened()) {
+    this->writer->release();
+  }
+  this->writer = std::make_unique<cv::VideoWriter>();
+  // make an empty writer not opened
+  // the opening will be finished in PullTask::run()
 }
 
 void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {

@@ -34,22 +34,18 @@ void m::MainWrapper::init() {
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, videoOpts);
   this->capsProps = std::make_unique<CapProps>(recognize->getCapProps());
-  auto writer =
-      YoloApp::newVideoWriter(*capsProps, videoOpts, YoloApp::base_pipeline + opts.rtmpUrl);
   // make sure the parameter of PullTask is by value
   // or RAII will release writer and cause problems.
-  this-> pullJob = std::make_unique<YoloApp::PullTask>(writer);
+  this-> pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, videoOpts);
 }
 
-y::Error m::MainWrapper::swapPullWriter(std::string pipeline){
+y::Error m::MainWrapper::setPullWriter(std::string pipeline){
   try {
     spdlog::info("Swap writer to pipeline {}", pipeline);
     if (this->pullJob == nullptr || this->capsProps == nullptr) {
       throw std::runtime_error("pull thread or capsProps is uninitialized");
     }
-    auto writer =
-        YoloApp::newVideoWriter(*capsProps, videoOpts, pipeline);
-    this->pullJob->setVideoWriter(writer);
+    this->pullJob->setVideoWriter(pipeline);
     return y::SUCCESS;
   } catch (std::exception e){
     spdlog::error(e.what());
@@ -166,7 +162,7 @@ void m::MainWrapper::resetPoll(std::string pipeline){
   if (this->pullJob == nullptr) {
     throw std::runtime_error("pullJob is uninitialized");
   }
-  this->swapPullWriter(pipeline);
+  this->setPullWriter(pipeline);
   this->pullJob->poll = 0;
   this->pullJob->isReadRedis = false;
 }

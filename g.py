@@ -23,8 +23,9 @@ sys.path.insert(0, so_root)
 import yolo_app
 
 base_rtmp_url = "rtmp://localhost:1935/live/"
+default_chan = "unknown"
 
-is_debug = False
+is_debug = True
 
 opts_dict = {
   "input_file_path": "0",
@@ -32,7 +33,7 @@ opts_dict = {
   "output_file_path": "",
   "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
   "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
-  "rtmp_url": base_rtmp_url + "test",
+  "rtmp_url": base_rtmp_url + default_chan,
   "redis_url": "tcp://127.0.0.1:6379",
   "scaled_coeffs": 0.2,
   "threshold_NMS": 0.125,
@@ -87,7 +88,7 @@ class UDPApp:
     address = (remote_host, remote_port)
     # yolo_app is MainWrapper
     self.hash:   None  | int = None
-    self.e_chan:  None | int = None
+    self.e_chan:  None | str = None
     self.app = yolo_app
     self.sock = socket.socket(type=socket.SOCK_DGRAM)
     self.sock.connect(address)
@@ -138,8 +139,8 @@ class UDPApp:
         chan: int
         _h, hash, chan = struct.unpack(MsgStruct.RTMP_EMERG_SERVER.value, msg)
         if (self.hash and self.hash == hash):
-          self.e_chan = chan
-          logger.info("set channel as {}".format(self.e_chan.to_bytes(2, 'big').hex()))
+          self.e_chan = chan.to_bytes(2, 'big').hex()
+          logger.info("set channel as {}".format(self.e_chan))
       case [MsgType.RTMP_STREAM.value, *rest]:
         head: int
         hash: int
@@ -173,6 +174,13 @@ class UDPApp:
                       self.id)
     self.sock.send(req)
     logger.info("Sent Init {}".format(req.hex()))
+  
+  def send_request_e_chan(self):
+    req = struct.pack(MsgStruct.RTMP_EMERG_CLIENT.value,
+                      MsgType.RTMP_EMERG.value,
+                      self.hash)
+    self.sock.send(req)
+    logger.info("Request new e-chan {}".format(req.hex()))
 
   def receive_once(self):
     # hopefully it will block here
@@ -190,11 +198,27 @@ class UDPApp:
 host = "127.0.0.1"
 port = 12345
 
+def gen_pipeline(chan):
+  if (chan != None):
+    return base_pipeline + base_rtmp_url + chan
+  else:
+    logger.error("channel is None. Fallback to default")
+    return base_pipeline + base_rtmp_url + chan
+
 def run_main():
   main.run_push()
   main.run_pull()
   # main.enable_poll()
   main.set_max_poll(60)
+  gevent.sleep(10)
+  main.reset_poll(gen_pipeline(u.e_chan))
+  main.enable_poll()
+  gevent.sleep(10)
+  u.send_request_e_chan()
+  gevent.sleep(1)
+  main.reset_poll(gen_pipeline(u.e_chan))
+  main.enable_poll()
+
 
 if __name__ == "__main__":
   opts = yolo_app.init_options(opts_dict)

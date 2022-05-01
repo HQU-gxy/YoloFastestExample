@@ -71,47 +71,30 @@ namespace YoloApp {
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
     bool isWriteRedis = true;
-    bool isWriteVideoWriter = false;
   public:
-    cv::VideoWriter getVideoWriter() const;
-
-    const Options &getOpts() const;
-
-    void setOpts(const YoloApp::Options &opts);
-
-    void setVideoWriter(cv::VideoWriter writer);
-
-
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                  const std::vector<const char *> classNames, const YoloApp::Options opts);
 
     int run();
 
-    void setVideoWriter(const std::string &pipeline);
   };
 
   class PullTask {
-  private:
-    cv::VideoWriter writer;
+    std::unique_ptr<cv::VideoWriter> writer = nullptr;
   public:
+    CapProps capProps;
+    Options opts;
     bool isReadRedis = false;
     int  maxPoll = 1500;
     int  poll = 0;
+    std::string pipeline;
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
-    void setVideoWriter(cv::VideoWriter writer);
-
-    PullTask(cv::VideoWriter writer);
+    PullTask(CapProps capProps, Options opts);
+    void setVideoWriter(std::string pipeline);
 
     void run(Options opts, sw::redis::Redis &redis);
   };
-
-  cv::VideoWriter
-  newVideoWriter(cv::VideoCapture &cap, const YoloApp::Options opts, const std::string pipeline);
-
-  cv::VideoWriter
-  newVideoWriter(YoloApp::CapProps props, const YoloApp::Options opts,
-                 const std::string pipeline);
 
   YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 }
