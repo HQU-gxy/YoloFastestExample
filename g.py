@@ -36,7 +36,7 @@ opts_dict = {
   "out_fps": 5,
   "crop_coeffs": 0.1,
   "threads_num": 4,
-  "is_debug": True,
+  "is_debug": False,
 }
 
 
