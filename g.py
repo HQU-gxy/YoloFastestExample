@@ -8,7 +8,8 @@ from e_helper import *
 from typing import List, TypeVar
 import hy
 import asyncio # I know asyncio but there not too much udp library
-import logging
+# import logging
+from loguru import logger
 import struct
 # https://docs.python.org/3/howto/logging.html
 
@@ -38,9 +39,10 @@ opts_dict = {
   "is_debug": True,
 }
 
-logging.basicConfig()
-if (opts_dict.get("is_debug")):
-  logging.getLogger().setLevel(logging.DEBUG)
+
+
+os.environ["LOGURU_LEVEL"] =  "DEBUG" if opts_dict.get("is_debug") else "INFO"
+# logger.add(sys.stdout, level="INFO")
 
 base_pipeline = "appsrc ! " + \
                 "videoconvert ! " + \
@@ -92,7 +94,7 @@ class UDPApp:
         # byte_list = bytes.fromhex("70") + \
         #     bytes(flatmap(lambda x: x.to_bytes(
         #         2, 'big', signed=True), pts))
-        logging.debug("[yolo] ({},{}) ({},{}) category: {} score: {}"
+        logger.debug("({},{}) ({},{}) category: {} score: {}"
                       .format(x.x1, x.y1, x.x2, x.y2, x.cate, x. score))
         # self.sock.send(byte_list)
         # print("[yolo] send {}".format(byte_list.hex()))
@@ -105,13 +107,13 @@ class UDPApp:
         # byte_list = bytes.fromhex("80") + \
         #     bytes(flatmap(lambda x: x.to_bytes(
         #         2, 'big', signed=True), pts))
-        logging.debug("[door] ({},{}) ({},{})"
+        logger.debug("({},{}) ({},{})"
                       .format(x1, y1, x2, y2))
         # self.sock.send(byte_list)
         # print("[door] send {}".format(byte_list.hex()))
   
   def on_poll_complete(self, poll):
-    logging.debug("poll completes! frame count {}".format(poll))
+    logger.debug("poll completes! frame count {}".format(poll))
 
   # https://docs.python.org/3/library/struct.html
   # https://www.educative.io/edpresso/what-is-the-python-struct-module
@@ -122,9 +124,9 @@ class UDPApp:
           hash: int
           _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
           self.hash = hash
-          logging.info("set hash as {}".format(self.hash.to_bytes(4, 'big').hex()))
+          logger.info("set hash as {}".format(self.hash.to_bytes(4, 'big').hex()))
         except:
-          logging.error("unpack hash error")
+          logger.error("unpack hash error")
           raise Exception("Can't get hash")
       case [MsgType.RTMP_EMERG.value, *rest]:
         hash: int
@@ -132,7 +134,7 @@ class UDPApp:
         _h, hash, chan = struct.unpack(MsgStruct.RTMP_EMERG_SERVER.value, msg)
         if (self.hash and self.hash == hash):
           self.e_chan = chan
-          logging.info("set channel as {}".format(self.e_chan.to_bytes(2, 'big').hex()))
+          logger.info("set channel as {}".format(self.e_chan.to_bytes(2, 'big').hex()))
       case [MsgType.RTMP_STREAM.value, *rest]:
         head: int
         hash: int
@@ -140,32 +142,32 @@ class UDPApp:
         head, hash, chan = struct.unpack(MsgStruct.RTMP_STREAM_SERVER.value, msg)
         if (self.hash and self.hash == hash):
           chn_s = chan.to_bytes(2, 'big').hex()
-          logging.info("Receive RTMP Channel {}".format(chn_s))
+          logger.info("Receive RTMP Channel {}".format(chn_s))
           if (self.main.get_pull_task_state() == False):
             self.main.reset_poll(chn_s)
             self.main.start_poll()
-            logging.info("Start RTMP to {}".format(chn_s))
+            logger.info("Start RTMP to {}".format(chn_s))
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
                                 head, 
                                 hash, 
                                 Code.OK.value)
             self.sock.send(resp)
           else:
-            logging.warning("Pull Task is busy")
+            logger.warning("Pull Task is busy")
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
                                 head, 
                                 hash, 
                                 Code.BUSY.value)
             self.sock.send(resp)
       case _:
-        logging.warning("Invalid message {}".format(msg.hex()))
+        logger.warning("Invalid message {}".format(msg.hex()))
 
   def send_init_req(self):
     req = struct.pack(MsgStruct.INIT_CLIENT.value, 
                       MsgType.INIT.value, 
                       self.id)
     self.sock.send(req)
-    logging.info("Sent Init {}".format(req.hex()))
+    logger.info("Sent Init {}".format(req.hex()))
 
   def receive_once(self):
     # hopefully it will block here
@@ -176,8 +178,8 @@ class UDPApp:
     # buffer size 8192 bytes
     while True:
       data, address = self.sock.recvfrom(1024)
+      logger.debug("{} from {}".format(data.hex(), address))
       self.handle_req(data)
-      logging.info("Msg {} from {}".format(data.hex(), address))
 
 
 host = "127.0.0.1"
