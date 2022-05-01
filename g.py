@@ -1,11 +1,13 @@
 import os
 import time
 import sys
-from gevent import socket
+import gevent
+from gevent import socket, Greenlet
 from toolz import mapcat as flatmap
 from e_helper import *
 from typing import List, TypeVar
 import hy
+import asyncio # I know asyncio but there not too much udp library
 import logging
 import struct
 # https://docs.python.org/3/howto/logging.html
@@ -33,7 +35,7 @@ opts_dict = {
   "out_fps": 5,
   "crop_coeffs": 0.1,
   "threads_num": 4,
-  "is_debug": False,
+  "is_debug": True,
 }
 
 logging.basicConfig()
@@ -120,7 +122,7 @@ class UDPApp:
           hash: int
           _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
           self.hash = hash
-          logging.info("set hash as {}".format(self.hash.hex()))
+          logging.info("set hash as {}".format(self.hash.to_bytes(4, 'big').hex()))
         except:
           logging.error("unpack hash error")
           raise Exception("Can't get hash")
@@ -130,14 +132,14 @@ class UDPApp:
         _h, hash, chan = struct.unpack(MsgStruct.RTMP_EMERG_SERVER.value, msg)
         if (self.hash and self.hash == hash):
           self.e_chan = chan
-          logging.info("set channel as {}".format(self.e_chan))
+          logging.info("set channel as {}".format(self.e_chan.to_bytes(2, 'big').hex()))
       case [MsgType.RTMP_STREAM.value, *rest]:
         head: int
         hash: int
         chan: int
         head, hash, chan = struct.unpack(MsgStruct.RTMP_STREAM_SERVER.value, msg)
         if (self.hash and self.hash == hash):
-          chn_s = str(chan)
+          chn_s = chan.to_bytes(2, 'big').hex()
           logging.info("Receive RTMP Channel {}".format(chn_s))
           if (self.main.get_pull_task_state() == False):
             self.main.reset_poll(chn_s)
@@ -149,20 +151,21 @@ class UDPApp:
                                 Code.OK.value)
             self.sock.send(resp)
           else:
-            logging.warn("Pull Task is busy")
+            logging.warning("Pull Task is busy")
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
                                 head, 
                                 hash, 
                                 Code.BUSY.value)
             self.sock.send(resp)
       case _:
-        logging.warn("Invalid message {}".format(msg.hex()))
+        logging.warning("Invalid message {}".format(msg.hex()))
 
   def send_init_req(self):
     req = struct.pack(MsgStruct.INIT_CLIENT.value, 
                       MsgType.INIT.value, 
                       self.id)
     self.sock.send(req)
+    logging.info("Sent Init {}".format(req.hex()))
 
   def receive_once(self):
     # hopefully it will block here
@@ -180,6 +183,12 @@ class UDPApp:
 host = "127.0.0.1"
 port = 12345
 
+def run_main():
+  main.run_push()
+  main.run_pull()
+  # main.enable_poll()
+  main.set_max_poll(60)
+
 if __name__ == "__main__":
   opts = yolo_app.init_options(opts_dict)
   main = yolo_app.MainWrapper(opts)
@@ -188,11 +197,10 @@ if __name__ == "__main__":
   main.set_on_detect_yolo(u.on_detect_yolo)
   main.set_on_detect_door(u.on_detect_door)
   main.set_on_poll_complete(u.on_poll_complete)
-  u.send_init_req()
-  u.receive_once()
-  main.run_push()
-  main.run_pull()
-  main.enable_poll()
-  main.set_max_poll(60)
-  u.serve_forever()
+  # https://sdiehl.github.io/gevent-tutorial/
+  g = gevent.spawn(u.serve_forever)
+  send_init = gevent.spawn(u.send_init_req())
+  run_g = gevent.spawn(run_main)
+  g.start()
+  gevent.joinall([g, send_init, run_g])
 
