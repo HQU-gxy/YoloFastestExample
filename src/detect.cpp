@@ -224,12 +224,14 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
       /// It's wasteful to copy the data, but it's the only way to get the data
       /// without causing problems.
       /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-      if (!this->writer->isOpened()){
-        spdlog::debug("Opening Video Writer");
-        auto[frame_width, frame_height, frame_fps] = capProps;
-        auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-        this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-        cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+      if (this->writer != nullptr && !pipeline.empty()){
+        if (!this->writer->isOpened()){
+          spdlog::debug("Opening Video Writer");
+          auto[frame_width, frame_height, frame_fps] = capProps;
+          auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
+          this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
+                             cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+        }
       }
       auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
           .value_or(std::make_pair("", ""))
