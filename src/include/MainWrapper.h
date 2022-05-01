@@ -57,8 +57,6 @@ namespace YoloApp::Main {
 
     Error setPullWriter(std::string pipeline);
 
-    const Options &getOpts() const;
-
     void pushRunDetach();
     void pullRunDetach();
 
@@ -71,14 +69,17 @@ namespace YoloApp::Main {
 
     bool getPullTaskState();
 
+    void clearQueue();
+
     int getPoll();
     int getMaxPoll();
 
     void setOnPollComplete(const std::function<void(int)> &onPollComplete);
 
-    void resetPoll(std::string pipeline);
+    void resetPoll();
 
     void enablePoll();
+    void startPoll(std::string pipeline);
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

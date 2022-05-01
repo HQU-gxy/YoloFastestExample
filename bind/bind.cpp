@@ -39,7 +39,9 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("get_max_poll", &m::MainWrapper::getMaxPoll)
       .def("set_max_poll", &m::MainWrapper::setMaxPoll)
       .def("reset_poll", &m::MainWrapper::resetPoll)
-      .def("enable_poll", &m::MainWrapper::enablePoll)
+      .def("_enable_poll", &m::MainWrapper::enablePoll)
+      .def("start_poll", &m::MainWrapper::startPoll)
+      .def("clear_queue", &m::MainWrapper::clearQueue)
       .def("__repr__", [](const m::MainWrapper &m) {
         return "<MainWrapper>";
       });

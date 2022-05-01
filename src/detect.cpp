@@ -217,23 +217,23 @@ int VideoHandler::run() {
   return YoloApp::Error::SUCCESS;
 }
 
-void PullTask::run(Options opts, sw::redis::Redis &redis) {
+void PullTask::run() {
   while (YoloApp::IS_CAPTURE_ENABLED) {
     if (this->isReadRedis) {
       //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
       /// It's wasteful to copy the data, but it's the only way to get the data
       /// without causing problems.
       /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-      if (this->writer != nullptr && !pipeline.empty()){
-        if (!this->writer->isOpened()){
+      if (this->writer != nullptr && !pipeline.empty()) {
+        if (!this->writer->isOpened()) {
           spdlog::debug("Opening Video Writer");
           auto[frame_width, frame_height, frame_fps] = capProps;
-          auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
+          auto out_framerate = this->opts.outFps == 0 ? frame_fps : this->opts.outFps;
           this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                             cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+                             cv::Size(frame_width * this->opts.scaledCoeffs, frame_height * this->opts.scaledCoeffs));
         }
       }
-      auto redisMemory = redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
+      auto redisMemory = this->redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
           .value_or(std::make_pair("", ""))
           .second;
       if (redisMemory.empty()) {
@@ -263,7 +263,13 @@ void PullTask::run(Options opts, sw::redis::Redis &redis) {
   }
 }
 
-PullTask::PullTask(CapProps capProps, Options opts) : capProps(capProps), opts(opts) {}
+
+void PullTask::clearQueue() {
+  this->redis.del("image"); // TODO: why the key of redis is hardcoded
+};
+
+PullTask::PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
+                                                                              redis(redis) {}
 
 void PullTask::setVideoWriter(std::string pipeline) {
   this->pipeline = pipeline;

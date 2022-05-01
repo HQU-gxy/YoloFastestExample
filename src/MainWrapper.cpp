@@ -3,8 +3,6 @@
 
 #include "MainWrapper.h"
 
-int getPoll();
-
 namespace m = YoloApp::Main;
 namespace r = sw::redis;
 namespace y = YoloApp;
@@ -36,10 +34,10 @@ void m::MainWrapper::init() {
   this->capsProps = std::make_unique<CapProps>(recognize->getCapProps());
   // make sure the parameter of PullTask is by value
   // or RAII will release writer and cause problems.
-  this-> pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, videoOpts);
+  this->pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, videoOpts, this->pullRedis);
 }
 
-y::Error m::MainWrapper::setPullWriter(std::string pipeline){
+y::Error m::MainWrapper::setPullWriter(std::string pipeline) {
   try {
     spdlog::info("Swap writer to pipeline {}", pipeline);
     if (this->pullJob == nullptr || this->capsProps == nullptr) {
@@ -47,7 +45,7 @@ y::Error m::MainWrapper::setPullWriter(std::string pipeline){
     }
     this->pullJob->setVideoWriter(pipeline);
     return y::SUCCESS;
-  } catch (std::exception e){
+  } catch (std::exception e) {
     spdlog::error(e.what());
     return y::Error::FAILURE;
   }
@@ -57,7 +55,7 @@ std::thread m::MainWrapper::pushRun() {
   if (this->recognize == nullptr) {
     throw std::runtime_error("recognize is uninitialized");
   }
-  std::thread pushTask([&](){
+  std::thread pushTask([&]() {
     this->handler->run();
   });
   return pushTask;
@@ -75,14 +73,15 @@ std::thread m::MainWrapper::pullRun() {
   if (this->pullJob == nullptr) {
     throw std::runtime_error("recognize is uninitialized");
   }
-  std::thread pullTask([&](){
-    pullJob->run(this->videoOpts, this->pullRedis);
+  std::thread pullTask([&]() {
+    pullJob->run();
   });
   return pullTask;
 }
 
 #ifndef _STANDALONE_ON
-m::Options m::OptionsFromPyDict(const py::dict &dict){
+
+m::Options m::OptionsFromPyDict(const py::dict &dict) {
   auto opts = YoloApp::Main::Options{
       .inputFilePath = dict["input_file_path"].cast<std::string>(),
       .outputFileName = dict["output_file_path"].cast<std::string>(),
@@ -99,6 +98,7 @@ m::Options m::OptionsFromPyDict(const py::dict &dict){
   };
   return opts;
 }
+
 #endif
 
 m::MainWrapper::MainWrapper(const m::Options &opts)
@@ -110,13 +110,9 @@ m::MainWrapper::MainWrapper(const m::Options &opts)
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
 }
 
-const YoloApp::Main::Options &YoloApp::Main::MainWrapper::getOpts() const {
-  return opts;
-}
-
 void
 YoloApp::Main::MainWrapper::setOnDetectDoor
-(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
+    (const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
   if (this->handler == nullptr) {
     throw std::runtime_error("handler is uninitialized");
   }
@@ -125,7 +121,7 @@ YoloApp::Main::MainWrapper::setOnDetectDoor
 
 void
 YoloApp::Main::MainWrapper::setOnDetectYolo
-(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
+    (const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
   if (this->handler == nullptr) {
     throw std::runtime_error("handler is uninitialized");
   }
@@ -158,11 +154,11 @@ bool m::MainWrapper::setMaxPoll(int max) {
 }
 
 // set the pull job writer to pipeline and stop the pull job
-void m::MainWrapper::resetPoll(std::string pipeline){
+void m::MainWrapper::resetPoll() {
   if (this->pullJob == nullptr) {
     throw std::runtime_error("pullJob is uninitialized");
   }
-  this->setPullWriter(pipeline);
+  this->setPullWriter("");
   this->pullJob->poll = 0;
   this->pullJob->isReadRedis = false;
 }
@@ -192,7 +188,22 @@ void m::MainWrapper::setOnPollComplete(const std::function<void(int)> &onPollCom
   this->pullJob->onPollComplete = onPollComplete;
 }
 
-y::Options m::toVideoOptions(const m::Options &opts){
+void YoloApp::Main::MainWrapper::startPoll(std::string pipeline) {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  this->setPullWriter(pipeline);
+  this->enablePoll();
+}
+
+void YoloApp::Main::MainWrapper::clearQueue() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  this->pullJob->clearQueue();
+}
+
+y::Options m::toVideoOptions(const m::Options &opts) {
   YoloApp::Options vopts{
       .outputFileName = opts.outputFileName,
       .rtmpUrl = opts.rtmpUrl,

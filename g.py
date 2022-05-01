@@ -208,16 +208,15 @@ def gen_pipeline(chan):
 def run_main():
   main.run_push()
   main.run_pull()
-  # main.enable_poll()
   main.set_max_poll(60)
   gevent.sleep(10)
-  main.reset_poll(gen_pipeline(u.e_chan))
-  main.enable_poll()
+  main.reset_poll()
+  main.start_poll(gen_pipeline(u.e_chan))
   gevent.sleep(10)
   u.send_request_e_chan()
   gevent.sleep(1)
-  main.reset_poll(gen_pipeline(u.e_chan))
-  main.enable_poll()
+  main.reset_poll()
+  main.start_poll(gen_pipeline(u.e_chan))
 
 
 if __name__ == "__main__":

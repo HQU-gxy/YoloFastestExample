@@ -81,6 +81,7 @@ namespace YoloApp {
 
   class PullTask {
     std::unique_ptr<cv::VideoWriter> writer = nullptr;
+    sw::redis::Redis &redis;
   public:
     CapProps capProps;
     Options opts;
@@ -90,10 +91,12 @@ namespace YoloApp {
     std::string pipeline;
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
-    PullTask(CapProps capProps, Options opts);
+    PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis);
     void setVideoWriter(std::string pipeline);
 
-    void run(Options opts, sw::redis::Redis &redis);
+    void clearQueue();
+
+    void run();
   };
 
   YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
