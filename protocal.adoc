@@ -109,6 +109,7 @@ Request sends from server to client.
 
 | Message type | 1      | -    | 0x75       | -
 | Hash         | 4      | hash | -          | you can interpret it as uint32
+| RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with `0b00xxxxxx` send channel to rtmp as hex string
 | Reason       | 1      | -    | 0x00/0xFF  | See <<Error>>
 
 |===

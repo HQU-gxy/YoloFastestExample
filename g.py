@@ -37,7 +37,7 @@ opts_dict = {
   "redis_url": "tcp://127.0.0.1:6379",
   "scaled_coeffs": 0.2,
   "threshold_NMS": 0.125,
-  "out_fps": 5,
+  "out_fps": 15,
   "crop_coeffs": 0.1,
   "threads_num": 4,
   "is_debug": is_debug,
@@ -80,6 +80,13 @@ def int_to_bytes(x: int, n=2):
   """big endian"""
   return x.to_bytes(n, byteorder='big')
 
+def gen_pipeline(chan):
+  if (chan != None):
+    return base_pipeline + base_rtmp_url + chan
+  else:
+    logger.error("channel is None. Fallback to default")
+    return base_pipeline + base_rtmp_url + chan
+
 class UDPApp:
   def __init__(self, remote_host: str, remote_port: int, yolo_app, id: int):
     self.id = id
@@ -100,7 +107,7 @@ class UDPApp:
         # byte_list = bytes.fromhex("70") + \
         #     bytes(flatmap(lambda x: x.to_bytes(
         #         2, 'big', signed=True), pts))
-        logger.debug("({},{}) ({},{}) category: {} score: {}"
+        logger.trace("({},{}) ({},{}) category: {} score: {}"
                       .format(x.x1, x.y1, x.x2, x.y2, x.cate, x. score))
         # self.sock.send(byte_list)
         # print("[yolo] send {}".format(byte_list.hex()))
@@ -113,12 +120,13 @@ class UDPApp:
         # byte_list = bytes.fromhex("80") + \
         #     bytes(flatmap(lambda x: x.to_bytes(
         #         2, 'big', signed=True), pts))
-        logger.debug("({},{}) ({},{})"
+        logger.trace("({},{}) ({},{})"
                       .format(x1, y1, x2, y2))
         # self.sock.send(byte_list)
         # print("[door] send {}".format(byte_list.hex()))
   
   def on_poll_complete(self, poll):
+    self.app.reset_poll
     logger.debug("poll completes! frame count {}".format(poll))
 
   # https://docs.python.org/3/library/struct.html
@@ -149,13 +157,15 @@ class UDPApp:
         if (self.hash and self.hash == hash):
           chn_s = chan.to_bytes(2, 'big').hex()
           logger.info("Receive RTMP Channel {}".format(chn_s))
-          if (self.main.get_pull_task_state() == False):
-            self.main.reset_poll(chn_s)
-            self.main.start_poll()
+          if (self.app.get_pull_task_state() == False):
+            self.app.reset_poll()
+            self.app.clear_queue()
+            self.app.start_poll(gen_pipeline(chn_s))
             logger.info("Start RTMP to {}".format(chn_s))
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
                                 head, 
                                 hash, 
+                                chan,
                                 Code.OK.value)
             self.sock.send(resp)
           else:
@@ -198,25 +208,19 @@ class UDPApp:
 host = "127.0.0.1"
 port = 12345
 
-def gen_pipeline(chan):
-  if (chan != None):
-    return base_pipeline + base_rtmp_url + chan
-  else:
-    logger.error("channel is None. Fallback to default")
-    return base_pipeline + base_rtmp_url + chan
 
 def run_main():
   main.run_push()
   main.run_pull()
   main.set_max_poll(60)
-  gevent.sleep(10)
-  main.reset_poll()
-  main.start_poll(gen_pipeline(u.e_chan))
-  gevent.sleep(10)
-  u.send_request_e_chan()
-  gevent.sleep(1)
-  main.reset_poll()
-  main.start_poll(gen_pipeline(u.e_chan))
+  # gevent.sleep(10)
+  # main.reset_poll()
+  # main.start_poll(gen_pipeline(u.e_chan))
+  # gevent.sleep(10)
+  # u.send_request_e_chan()
+  # gevent.sleep(1)
+  # main.reset_poll()
+  # main.start_poll(gen_pipeline(u.e_chan))
 
 
 if __name__ == "__main__":
