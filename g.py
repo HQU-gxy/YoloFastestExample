@@ -27,6 +27,9 @@ default_chan = "unknown"
 
 is_debug = True
 
+emerg_max_poll = 60
+stream_max_poll = 1500
+
 opts_dict = {
   "input_file_path": "0",
   # "input_file_path": os.path.join(so_root, "test.mp4"),
@@ -37,7 +40,7 @@ opts_dict = {
   "redis_url": "tcp://127.0.0.1:6379",
   "scaled_coeffs": 0.2,
   "threshold_NMS": 0.125,
-  "out_fps": 15,
+  "out_fps": 6,
   "crop_coeffs": 0.1,
   "threads_num": 4,
   "is_debug": is_debug,
@@ -105,6 +108,7 @@ class UDPApp:
   # when reset poll
   def reset_poll(self):
     self.app.reset_poll()
+    self.app.set_max_poll(emerg_max_poll)
     self.status = Code.OK
 
   def on_detect_yolo(self, xs):
@@ -168,7 +172,10 @@ class UDPApp:
           if (self.app.get_pull_task_state() == False):
             self.reset_poll()
             self.app.clear_queue()
+
+            self.app.set_max_poll(stream_max_poll)
             self.app.start_poll(gen_pipeline(chn_s))
+
             logger.info("Start RTMP to {}".format(chn_s))
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
                                 head, 
@@ -229,7 +236,7 @@ port = 12345
 def run_main():
   main.run_push()
   main.run_pull()
-  main.set_max_poll(60)
+  main.set_max_poll(emerg_max_poll)
   # gevent.sleep(10)
   # main.reset_poll()
   # main.start_poll(gen_pipeline(u.e_chan))

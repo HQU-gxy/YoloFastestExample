@@ -207,11 +207,18 @@ int VideoHandler::run() {
 
     auto end = ncnn::get_current_time();
 
-    real_frame_count++;
-    if (frame_count > 0) {
-      spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
-    } else {
-      spdlog::debug("[{}]\t{} ms", real_frame_count, end - start);
+    // Debug info
+    if (opts.isDebug) {
+      real_frame_count++;
+      if (real_frame_count > (INT_MAX - 10)){
+        spdlog::warn("Frame count will be exceeded. Reset to 0");
+        real_frame_count = 0;
+      }
+      if (frame_count > 0) {
+        spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
+      } else {
+        spdlog::debug("[{}]\t{} ms", real_frame_count, end - start);
+      }
     }
   }
   return YoloApp::Error::SUCCESS;

@@ -19,8 +19,8 @@ class MsgStruct(Enum):
   RTMP_STREAM_SERVER = ">BIH" # type hash chann
   RTMP_STREAM_CLIENT = ">BIHB" # type hash chann reason
 
-  RTMP_STOP_SERVER = ">BIH" # type hash
-  RTMP_STOP_CLIENT = ">BIHB" # type hash reason
+  RTMP_STOP_SERVER = ">BI" # type hash
+  RTMP_STOP_CLIENT = ">BIB" # type hash reason
 
   HEARTBEAT_CLIENT = ">BI" # type hash
 
