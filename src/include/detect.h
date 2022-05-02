@@ -92,7 +92,7 @@ namespace YoloApp {
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
     PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis);
-    void setVideoWriter(std::string pipeline);
+    void setVideoWriter(std::string pipe);
 
     void clearQueue();
 

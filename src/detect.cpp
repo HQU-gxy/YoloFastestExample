@@ -273,8 +273,8 @@ void PullTask::clearQueue() {
 PullTask::PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
                                                                               redis(redis) {}
 
-void PullTask::setVideoWriter(std::string pipeline) {
-  this->pipeline = pipeline;
+void PullTask::setVideoWriter(std::string pipe) {
+  this->pipeline = std::move(pipe);
   if (this->writer != nullptr && this->writer->isOpened()) {
     this->writer->release();
   }
