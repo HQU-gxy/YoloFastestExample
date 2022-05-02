@@ -22,5 +22,7 @@ class MsgStruct(Enum):
 
 class Code(Enum):
   OK = bytes.fromhex("ff")[0]
-  BUSY = bytes.fromhex("01")[0]
+  BUSY = bytes.fromhex("10")[0]
+  BUSY_EMERG = bytes.fromhex("11")[0]
+  BUSY_STREAM = bytes.fromhex("12")[0]
   ERR = bytes.fromhex("00")[0]

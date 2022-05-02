@@ -110,7 +110,7 @@ Request sends from server to client.
 | Message type | 1      | -    | 0x75       | -
 | Hash         | 4      | hash | -          | you can interpret it as uint32
 | RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with `0b00xxxxxx` send channel to rtmp as hex string
-| Reason       | 1      | -    | 0x00/0xFF  | See <<Error>>
+| Reason       | 1      | -    | -  | See <<Error>>
 
 |===
 
@@ -124,6 +124,7 @@ Request sends from server to client.
 
 | Message type | 1      | -      | 0x64     | -
 | Hash         | 4      | hash | -          | you can interpret it as uint32
+| Reason       | 1      | -    | -  | See <<Error>>. Meaning Status here.
 
 |===
 
@@ -135,8 +136,10 @@ No Response
 |===
 | Value | Meaning | Comments
 
-| 0xFF        | OK         | General success
-| 0x01        | Busy       | Maybe another streaming is running
+| 0xFF        | OK         | General success or normal status
+| 0x10        | Busy       | Maybe another streaming is running
+| 0x11        | Busy with Emerg  | Maybe another streaming is running
+| 0x12        | Busy with Stream  | Maybe another streaming is running
 | 0x00        | Error      | General error
 
 |===
