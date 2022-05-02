@@ -258,6 +258,8 @@ void PullTask::run() {
       if (poll > this->maxPoll) {
         isReadRedis = false;
         this->onPollComplete(this->poll);
+        this->writer->release();
+        this->writer = nullptr;
       }
     }
   }
