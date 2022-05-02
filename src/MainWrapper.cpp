@@ -45,7 +45,7 @@ y::Error m::MainWrapper::setPullWriter(std::string pipeline) {
     }
     this->pullJob->setVideoWriter(pipeline);
     return y::SUCCESS;
-  } catch (std::exception e) {
+  } catch (std::exception &e) {
     spdlog::error(e.what());
     return y::Error::FAILURE;
   }

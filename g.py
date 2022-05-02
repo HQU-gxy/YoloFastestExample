@@ -92,6 +92,7 @@ class UDPApp:
     self.id = id
     self.host = remote_host
     self.port = remote_port
+    self.status = Code.OK
     address = (remote_host, remote_port)
     # yolo_app is MainWrapper
     self.hash:   None  | int = None
@@ -99,6 +100,12 @@ class UDPApp:
     self.app = yolo_app
     self.sock = socket.socket(type=socket.SOCK_DGRAM)
     self.sock.connect(address)
+  
+  # should call this instead of self.app.reset_poll
+  # when reset poll
+  def reset_poll(self):
+    self.app.reset_poll()
+    self.status = Code.OK
 
   def on_detect_yolo(self, xs):
     if xs:
@@ -126,8 +133,9 @@ class UDPApp:
         # print("[door] send {}".format(byte_list.hex()))
   
   def on_poll_complete(self, poll):
-    self.app.reset_poll
+    self.reset_poll()
     logger.debug("poll completes! frame count {}".format(poll))
+    self.status = Code.OK
 
   # https://docs.python.org/3/library/struct.html
   # https://www.educative.io/edpresso/what-is-the-python-struct-module
@@ -158,7 +166,7 @@ class UDPApp:
           chn_s = chan.to_bytes(2, 'big').hex()
           logger.info("Receive RTMP Channel {}".format(chn_s))
           if (self.app.get_pull_task_state() == False):
-            self.app.reset_poll()
+            self.reset_poll()
             self.app.clear_queue()
             self.app.start_poll(gen_pipeline(chn_s))
             logger.info("Start RTMP to {}".format(chn_s))
@@ -168,6 +176,7 @@ class UDPApp:
                                 chan,
                                 Code.OK.value)
             self.sock.send(resp)
+            self.status = Code.BUSY_STREAM
           else:
             logger.warning("Pull Task is busy")
             resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value, 
@@ -175,6 +184,19 @@ class UDPApp:
                                 hash, 
                                 Code.BUSY.value)
             self.sock.send(resp)
+
+      case [MsgType.RTMP_STOP.value, *rest]:
+        head: int
+        hash: int
+        head, hash = struct.unpack(MsgStruct.RTMP_STOP_SERVER.value,msg)
+        if (self.hash and self.hash == hash):
+          self.reset_poll()
+          resp = struct.pack(MsgStruct.RTMP_STOP_CLIENT.value,
+                              head,
+                              hash,
+                              Code.OK.value)
+          self.sock.send(resp)
+
       case _:
         logger.warning("Invalid message {}".format(msg.hex()))
 
@@ -191,11 +213,6 @@ class UDPApp:
                       self.hash)
     self.sock.send(req)
     logger.info("Request new e-chan {}".format(req.hex()))
-
-  def receive_once(self):
-    # hopefully it will block here
-    msg = self.sock.recv(1024)
-    self.handle_req(msg)
 
   def serve_forever(self):
     # buffer size 8192 bytes

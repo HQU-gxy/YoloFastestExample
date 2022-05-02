@@ -114,6 +114,33 @@ Request sends from server to client.
 
 |===
 
+### Request Stop Streaming from Server
+
+This will stop both emerg and normal streaming.
+
+#### Server
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x76       | -
+| Hash         | 4      | hash   | -          | -
+
+|===
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x76     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| Reason       | 1      | -    | -  | See <<Error>>. Meaning Status here.
+
+|===
+
 ### Heartbeat
 
 #### Client

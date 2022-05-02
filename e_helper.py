@@ -5,6 +5,7 @@ class MsgType(Enum):
   INIT = bytes.fromhex("70")[0]
   RTMP_EMERG = bytes.fromhex("77")[0]
   RTMP_STREAM = bytes.fromhex("75")[0]
+  RTMP_STOP = bytes.fromhex("76")[0]
   HEARTBEAT = bytes.fromhex("64")[0]
 
 # See https://docs.python.org/3/library/struct.html
@@ -17,6 +18,9 @@ class MsgStruct(Enum):
 
   RTMP_STREAM_SERVER = ">BIH" # type hash chann
   RTMP_STREAM_CLIENT = ">BIHB" # type hash chann reason
+
+  RTMP_STOP_SERVER = ">BIH" # type hash
+  RTMP_STOP_CLIENT = ">BIHB" # type hash reason
 
   HEARTBEAT_CLIENT = ">BI" # type hash
 
