@@ -7,14 +7,6 @@
 
 namespace YoloApp {
 
-  int VideoInterface::recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts) {
-    auto writer = YoloApp::newVideoWriter(cap, opts,
-                                                        YoloApp::base_pipeline +
-                                                        opts.rtmpUrl);
-    this->initializeVideoHandler(api, redis, opts)->run();
-    return YoloApp::Error::SUCCESS;
-  }
-
   std::optional<std::unique_ptr<VideoInterface>>
   createFile(const std::string &path) {
     auto type = getFileType(path);

@@ -47,7 +47,6 @@ namespace YoloApp {
       return (videoHandler != nullptr) ? std::optional(videoHandler) : std::nullopt;
     }
 
-    int recognize(YoloFastestV2 &api, sw::redis::Redis &redis, YoloApp::Options opts);
   };
 
   // TODO: handle output file name differently

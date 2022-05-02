@@ -54,10 +54,12 @@ int main(int argc, char **argv) {
 
   auto m = YoloApp::Main::MainWrapper(opts);
   m.init();
+  m.setMaxPoll(INT_MAX);
   m.setPullTaskState(true);
   auto push = m.pushRun();
   push.detach();
   auto pull = m.pullRun();
+  m.enablePoll();
   pull.join();
 
   return YoloApp::Error::SUCCESS;

@@ -2,7 +2,7 @@ import os
 import sys
 import asyncio
 import asyncio_dgram
-from toolz import mapcat
+from toolz import mapcat as flatmap
 
 pwd = os.path.dirname(os.path.realpath(__file__))
 print(pwd)
@@ -36,6 +36,9 @@ opts_dict = {
     "is_debug": False,
 }
 
+# https://www.gevent.org/examples/udp_client.html
+# https://www.gevent.org/examples/udp_server.html
+
 # stream
 # make sure server and client are share the same port
 
@@ -56,7 +59,7 @@ class UDPApp:
             for x in xs:
                 (x1, y1), (x2, y2) = x
                 pts = [x1, y1, x2, y2]
-                byte_list = bytes.fromhex("80") + bytes(mapcat(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                byte_list = bytes.fromhex("80") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
                 await self.s.send(byte_list)
                 await self.q.put((byte_list, "door"))
 
@@ -65,7 +68,7 @@ class UDPApp:
         if xs:
             for x in xs:
                 pts = [x.x1, x.y1, x.x2, x.y2]
-                byte_list = bytes.fromhex("70") + bytes(mapcat(lambda x: x.to_bytes(2, 'big', signed=True), pts))
+                byte_list = bytes.fromhex("70") + bytes(flatmap(lambda x: x.to_bytes(2, 'big', signed=True), pts))
                 await self.s.send(byte_list)
                 await self.q.put((byte_list, "yolo"))
 
@@ -96,14 +99,14 @@ loop = asyncio.new_event_loop()
 # set_on_detect_yolo callback
 # no idea whether addition event_loop is necessary
 
-opts = yolo_app.init_options(opts_dict)
-main = yolo_app.MainWrapper(opts)
-main.init()
-u = UDPApp(host, port, main)
-main.set_on_detect_yolo(u.on_detect_yolo)
-main.set_on_detect_door(u.on_detect_door)
-main.set_pull_task_state(False)
-main.run_push()
-main.run_pull()
-
-loop.run_until_complete(u.udp_server())
+if __name__ == "__main__":
+    opts = yolo_app.init_options(opts_dict)
+    main = yolo_app.MainWrapper(opts)
+    main.init()
+    u = UDPApp(host, port, main)
+    main.set_on_detect_yolo(u.on_detect_yolo)
+    main.set_on_detect_door(u.on_detect_door)
+    main.set_pull_task_state(False)
+    main.run_push()
+    main.run_pull()
+    loop.run_until_complete(u.udp_server())

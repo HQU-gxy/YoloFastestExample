@@ -29,10 +29,19 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
-      .def("swap_pull_writer", &m::MainWrapper::swapPullWriter)
-      .def("set_pull_task_state", &m::MainWrapper::setPullTaskState)
+      .def("_set_pull_writer", &m::MainWrapper::setPullWriter)
+      .def("_set_pull_task_state", &m::MainWrapper::setPullTaskState)
+      .def("get_pull_task_state", &m::MainWrapper::getPullTaskState)
       .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
       .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
+      .def("set_on_poll_complete", &m::MainWrapper::setOnPollComplete)
+      .def("get_poll", &m::MainWrapper::getPoll)
+      .def("get_max_poll", &m::MainWrapper::getMaxPoll)
+      .def("set_max_poll", &m::MainWrapper::setMaxPoll)
+      .def("reset_poll", &m::MainWrapper::resetPoll)
+      .def("_enable_poll", &m::MainWrapper::enablePoll)
+      .def("start_poll", &m::MainWrapper::startPoll)
+      .def("clear_queue", &m::MainWrapper::clearQueue)
       .def("__repr__", [](const m::MainWrapper &m) {
         return "<MainWrapper>";
       });

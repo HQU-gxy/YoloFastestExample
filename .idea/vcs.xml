@@ -3,7 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/CLI11" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/lib/asio" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/date" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/hiredis" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/pybind11" vcs="Git" />

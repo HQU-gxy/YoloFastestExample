@@ -1,0 +1,178 @@
+# protocal
+
+a standard protocal communicate with server.
+
+## UDP Server 
+
+Send a http request to get the api infomation.
+# protocal
+
+## UDP Server
+
+Big-endian
+
+### shake hand
+
+`0x70` + `deive_id` (which is defined as `{"id": 123, "name": "deive"}`, name is a human-readable label).
+
+id is two byte. return a one dispensible hash key. 4 byte.
+
+From client to server to initiate a connection. Note the UDP port
+client using will be reuse until next shake hand. So the client should keep listening
+the inital UDP port.
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -    | 0x70         | -
+| Device ID    | 2      | uint16 | 0 - 65535  | -
+
+|===
+
+#### Server
+
+Success:
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -    | 0x70       | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+
+|===
+
+Error:
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -    | 0x70       | -
+| Reason       | 1      | -    | 0x00/0xFF  | See <<Error>>
+
+|===
+
+#### Emergency RTMP Path
+
+Request sends from client to server. The client can use it later when the emergency happends.
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x77       | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32 
+
+|===
+
+#### Server
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -    | 0x77         | -
+| Hash         | 4      | hash | -            | you can interpret it as uint32
+| RTMP Channel | 2      | uint16 | 49152 - 65535  | client can open a RTMP session on that link. start with `0b11xxxxxx` send channel to rtmp as hex string
+
+|===
+
+Note: the server will give the message to the client without requesting.
+
+### Request Streaming from Server
+
+Request sends from server to client.
+
+#### Server
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x75       | -
+| Hash         | 4      | hash   | -          | -
+| RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with `0b00xxxxxx` send channel to rtmp as hex string
+
+|===
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -    | 0x75       | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| RTMP Session | 2      | uint16 | 0 - 49152  | client open a RTMP session on such link. start with `0b00xxxxxx` send channel to rtmp as hex string
+| Reason       | 1      | -    | -  | See <<Error>>
+
+|===
+
+### Request Stop Streaming from Server
+
+This will stop both emerg and normal streaming.
+
+#### Server
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x76       | -
+| Hash         | 4      | hash   | -          | -
+
+|===
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x76     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| Reason       | 1      | -    | -  | See <<Error>>. Meaning Status here.
+
+|===
+
+### Heartbeat
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x64     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| Reason       | 1      | -    | -  | See <<Error>>. Meaning Status here.
+
+|===
+
+No Response
+
+### Error
+
+[cols="1,1,1"]
+|===
+| Value | Meaning | Comments
+
+| 0xFF        | OK         | General success or normal status
+| 0x10        | Busy       | Maybe another streaming is running
+| 0x11        | Busy with Emerg  | Maybe another streaming is running
+| 0x12        | Busy with Stream  | Maybe another streaming is running
+| 0x00        | Error      | General error
+
+|===
+
+
+
+## HTTP and WebSocket
+
+See https://github.com/crosstyan/clj-mylive/blob/master/src/elevator_server/http.clj[http.clj]
