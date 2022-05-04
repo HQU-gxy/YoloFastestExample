@@ -6,3 +6,4 @@ Yolo-Fastestv2
 Yolo-FastestV2
 build*
 __pycache__
+*.so
