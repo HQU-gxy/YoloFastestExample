@@ -30,3 +30,5 @@ class Code(Enum):
   BUSY_EMERG = bytes.fromhex("11")[0]
   BUSY_STREAM = bytes.fromhex("12")[0]
   ERR = bytes.fromhex("00")[0]
+
+# Use condp from https://github.com/jblomo/CljPy/blob/master/cljpy/core.py

@@ -4,7 +4,10 @@ This project is developed in Linux, with Python 3.10. Has not been tested in Win
 
 ## Build
 
+You should have Python 3.10 or higher installed.
+
 ```bash
+# https://pkgs.org/
 sudo apt install libspdlog-dev
 # https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html
 sudo apt install libopencv-dev
@@ -17,12 +20,17 @@ cmake -DREDIS_PLUS_PLUS_CXX_STANDARD=17 ..
 make
 make install
 
+sudo apt install libpython3.9-dev
+pip install python-config
+python-config --includes
+# change Python3_INCLUDE_DIR and Python3_LIBRARY
+
 # return to ${PROJECT_SOURCE_DIR}
 cd ../../
 
 mkdir build
 cd build
-# only build python bind
+# cmake .. -DPython3_INCLUDE_DIR=/usr/include/python3.9 -DPython3_LIBRARY=/usr/lib/libpython3.9.so
 cmake ..
 cmake --build . --target yolo_app -- -j $(nproc)
 # default install to ${PROJECT_SOURCE_DIR}/py

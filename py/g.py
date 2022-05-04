@@ -1,5 +1,3 @@
-import yolo_app
-from operator import is_
 import os
 import time
 import sys
@@ -13,6 +11,8 @@ import asyncio  # I know asyncio but there not too much udp library
 # import logging
 from loguru import logger
 import struct
+
+import yolo_app
 pwd = os.path.dirname(os.path.realpath(__file__))
 print(pwd)
 so_root = os.path.join(pwd)
@@ -146,73 +146,73 @@ class UDPApp:
     # https://docs.python.org/3/library/struct.html
     # https://www.educative.io/edpresso/what-is-the-python-struct-module
     def handle_req(self, msg: bytes):
-        match list(msg):
-            case [MsgType.INIT.value, *rest]:
-                try:
-                    hash: int
-                    _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
-                    self.hash = hash
-                    logger.info("set hash as {}".format(
-                        self.hash.to_bytes(4, 'big').hex()))
-                except:
-                    logger.error("unpack hash error")
-                    raise Exception("Can't get hash")
-            case [MsgType.RTMP_EMERG.value, *rest]:
+        h = list(msg)[0]
+        if h == MsgType.INIT.value:
+            try:
                 hash: int
-                chan: int
-                _h, hash, chan = struct.unpack(
-                    MsgStruct.RTMP_EMERG_SERVER.value, msg)
-                if (self.hash and self.hash == hash):
-                    self.e_chan = chan.to_bytes(2, 'big').hex()
-                    logger.info("set channel as {}".format(self.e_chan))
-            case [MsgType.RTMP_STREAM.value, *rest]:
-                head: int
-                hash: int
-                chan: int
-                head, hash, chan = struct.unpack(
-                    MsgStruct.RTMP_STREAM_SERVER.value, msg)
-                if (self.hash and self.hash == hash):
-                    chn_s = chan.to_bytes(2, 'big').hex()
-                    logger.info("Receive RTMP Channel {}".format(chn_s))
-                    if (self.app.get_pull_task_state() == False):
-                        self.reset_poll()
-                        self.app.clear_queue()
-
-                        self.app.set_max_poll(stream_max_poll)
-                        self.app.start_poll(gen_pipeline(chn_s))
-
-                        logger.info("Start RTMP to {}".format(chn_s))
-                        resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
-                                           head,
-                                           hash,
-                                           chan,
-                                           Code.OK.value)
-                        self.sock.send(resp)
-                        self.status = Code.BUSY_STREAM
-                    else:
-                        logger.warning("Pull Task is busy")
-                        resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
-                                           head,
-                                           hash,
-                                           chan,
-                                           Code.BUSY.value)
-                        self.sock.send(resp)
-
-            case [MsgType.RTMP_STOP.value, *rest]:
-                head: int
-                hash: int
-                head, hash = struct.unpack(
-                    MsgStruct.RTMP_STOP_SERVER.value, msg)
-                if (self.hash and self.hash == hash):
+                _h, hash = struct.unpack(MsgStruct.INIT_SERVER.value, msg)
+                self.hash = hash
+                logger.info("set hash as {}".format(
+                    self.hash.to_bytes(4, 'big').hex()))
+            except:
+                logger.error("unpack hash error")
+                raise Exception("Can't get hash")
+        elif h == MsgType.RTMP_EMERG.value:
+            hash: int
+            chan: int
+            _h, hash, chan = struct.unpack(
+                MsgStruct.RTMP_EMERG_SERVER.value, msg)
+            if (self.hash and self.hash == hash):
+                self.e_chan = chan.to_bytes(2, 'big').hex()
+                logger.info("set channel as {}".format(self.e_chan))
+        elif h == MsgType.RTMP_STREAM.value:
+            head: int
+            hash: int
+            chan: int
+            head, hash, chan = struct.unpack(
+                MsgStruct.RTMP_STREAM_SERVER.value, msg)
+            if (self.hash and self.hash == hash):
+                chn_s = chan.to_bytes(2, 'big').hex()
+                logger.info("Receive RTMP Channel {}".format(chn_s))
+                if (self.app.get_pull_task_state() == False):
                     self.reset_poll()
-                    resp = struct.pack(MsgStruct.RTMP_STOP_CLIENT.value,
+                    self.app.clear_queue()
+
+                    self.app.set_max_poll(stream_max_poll)
+                    self.app.start_poll(gen_pipeline(chn_s))
+
+                    logger.info("Start RTMP to {}".format(chn_s))
+                    resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
                                        head,
                                        hash,
+                                       chan,
                                        Code.OK.value)
                     self.sock.send(resp)
+                    self.status = Code.BUSY_STREAM
+                else:
+                    logger.warning("Pull Task is busy")
+                    resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
+                                       head,
+                                       hash,
+                                       chan,
+                                       Code.BUSY.value)
+                    self.sock.send(resp)
 
-            case _:
-                logger.warning("Invalid message {}".format(msg.hex()))
+        elif h == MsgType.RTMP_STOP.value:
+            head: int
+            hash: int
+            head, hash = struct.unpack(
+                MsgStruct.RTMP_STOP_SERVER.value, msg)
+            if (self.hash and self.hash == hash):
+                self.reset_poll()
+                resp = struct.pack(MsgStruct.RTMP_STOP_CLIENT.value,
+                                   head,
+                                   hash,
+                                   Code.OK.value)
+                self.sock.send(resp)
+
+        else:
+            logger.warning("Invalid message {}".format(msg.hex()))
 
     def send_init_req(self):
         req = struct.pack(MsgStruct.INIT_CLIENT.value,
