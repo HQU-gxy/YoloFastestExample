@@ -148,4 +148,12 @@ target_link_libraries(yolo_app PRIVATE ${OpenCV_LIBS})
 target_link_libraries(yolo_app PRIVATE ${HIREDIS_LIB})
 target_link_libraries(yolo_app PRIVATE ${REDIS_PLUS_PLUS_LIB})
 target_link_libraries(yolo_app PRIVATE ${NCNN_LIBS})
-#target_link_libraries(yolo_app PRIVATE spdlog::spdlog)
+
+set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
+include(GNUInstallDirs)
+set(YOLO_APP_PY_INSTALL_DIRECTORY "${PROJECT_SOURCE_DIR}/py")
+install(TARGETS yolo_app
+    COMPONENT python
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${YOLO_APP_PY_INSTALL_DIRECTORY}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

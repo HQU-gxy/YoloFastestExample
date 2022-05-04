@@ -1,7 +1,36 @@
-
 # Yolo-FastestV2
 
 This project is developed in Linux, with Python 3.10. Has not been tested in Windows.
+
+## Build
+
+```bash
+sudo apt install libspdlog-dev
+# https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html
+sudo apt install libopencv-dev
+sudo apt install libhiredis-dev
+# https://github.com/sewenew/redis-plus-plus/
+cd lib/redis-plus-plus
+mkdir build
+cd build
+cmake -DREDIS_PLUS_PLUS_CXX_STANDARD=17 ..
+make
+make install
+
+# return to ${PROJECT_SOURCE_DIR}
+cd ../../
+
+mkdir build
+cd build
+# only build python bind
+cmake --build . --target yolo_app -- -j $(nproc)
+# default install to ${PROJECT_SOURCE_DIR}/py
+make install
+cd ../py
+pip install requirements.txt
+```
+
+now run `python3 g.py` in `${PROJECT_SOURCE_DIR}/py`
 
 ## IDE
 
