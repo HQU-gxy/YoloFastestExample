@@ -23,6 +23,7 @@ cd ../../
 mkdir build
 cd build
 # only build python bind
+cmake ..
 cmake --build . --target yolo_app -- -j $(nproc)
 # default install to ${PROJECT_SOURCE_DIR}/py
 make install
