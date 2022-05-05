@@ -19,7 +19,9 @@ so_root = os.path.join(pwd)
 print(so_root)
 sys.path.insert(0, so_root)
 
-base_rtmp_url = "rtmp://localhost:1935/live/"
+host = "192.168.123.46"
+port = 12345
+base_rtmp_url = "rtmp://{}:1935/live/".format(host)
 default_chan = "unknown"
 
 is_debug = True
@@ -31,8 +33,8 @@ opts_dict = {
     "input_file_path": "0",
     # "input_file_path": os.path.join(so_root, "test.mp4"),
     "output_file_path": "",
-    "param_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.param"),
-    "bin_path": os.path.join(pwd, "model", "yolo-fastestv2-opt.bin"),
+    "param_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.param"),
+    "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
     "rtmp_url": base_rtmp_url + default_chan,
     "redis_url": "tcp://127.0.0.1:6379",
     "scaled_coeffs": 0.2,
@@ -236,8 +238,6 @@ class UDPApp:
             self.handle_req(data)
 
 
-host = "127.0.0.1"
-port = 12345
 
 
 def run_main():

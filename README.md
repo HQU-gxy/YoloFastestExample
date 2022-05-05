@@ -34,6 +34,7 @@ cd build
 cmake ..
 cmake --build . --target yolo_app -- -j $(nproc)
 # default install to ${PROJECT_SOURCE_DIR}/py
+make
 make install
 cd ../py
 pip install requirements.txt
