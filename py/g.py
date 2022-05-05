@@ -11,46 +11,45 @@ import asyncio  # I know asyncio but there not too much udp library
 # import logging
 from loguru import logger
 import struct
+import argparse
 
-import yolo_app
+# for so file
 pwd = os.path.dirname(os.path.realpath(__file__))
 print(pwd)
 so_root = os.path.join(pwd)
 print(so_root)
 sys.path.insert(0, so_root)
+import yolo_app
 
-host = "192.168.123.46"
-port = 12345
-base_rtmp_url = "rtmp://{}:1935/live/".format(host)
+parser = argparse.ArgumentParser(description='Yolo App')
+parser.add_argument(
+    '--host',
+    type=str,
+    default='127.0.0.1',
+    help='the host of remote server',
+    metavar='PARAM',
+)
+
+parser.add_argument(
+    '--port', '-p',
+    type=int,
+    default=12345,
+    help='the port of remote server',
+    metavar='PARAM',
+)
+
+parser.add_argument(
+    '--debug', '-d',
+    action='store_true',
+    help='if is debug',
+)
+
 default_chan = "unknown"
 
-is_debug = True
 
 emerg_max_poll = 60
 stream_max_poll = 1500
 
-opts_dict = {
-    "input_file_path": "0",
-    # "input_file_path": os.path.join(so_root, "test.mp4"),
-    "output_file_path": "",
-    "param_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.param"),
-    "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
-    "rtmp_url": base_rtmp_url + default_chan,
-    "redis_url": "tcp://127.0.0.1:6379",
-    "scaled_coeffs": 0.2,
-    "threshold_NMS": 0.125,
-    "out_fps": 6,
-    "crop_coeffs": 0.1,
-    "threads_num": 4,
-    "is_debug": is_debug,
-}
-
-
-# https://loguru.readthedocs.io/en/stable/resources/recipes.html#changing-the-level-of-an-existing-handler
-# https://github.com/Delgan/loguru/issues/138
-loguru_level = "DEBUG" if is_debug else "INFO"
-logger.remove()
-logger.add(sys.stderr, level=loguru_level)
 
 base_pipeline = "appsrc ! " + \
                 "videoconvert ! " + \
@@ -238,8 +237,6 @@ class UDPApp:
             self.handle_req(data)
 
 
-
-
 def run_main():
     main.run_push()
     main.run_pull()
@@ -255,8 +252,36 @@ def run_main():
 
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    host = args.host
+    port = args.port
+    is_debug = args.debug
+    base_rtmp_url = "rtmp://{}:1935/live/".format(host)
+    opts_dict = {
+        "input_file_path": "0",
+        # "input_file_path": os.path.join(so_root, "test.mp4"),
+        "output_file_path": "",
+        "param_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.param"),
+        "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
+        "rtmp_url": base_rtmp_url + default_chan,
+        "redis_url": "tcp://127.0.0.1:6379",
+        "scaled_coeffs": 0.2,
+        "threshold_NMS": 0.125,
+        "out_fps": 6,
+        "crop_coeffs": 0.1,
+        "threads_num": 4,
+        "is_debug": is_debug,
+    }
+
+    # https://loguru.readthedocs.io/en/stable/resources/recipes.html#changing-the-level-of-an-existing-handler
+    # https://github.com/Delgan/loguru/issues/138
+    loguru_level = "DEBUG" if is_debug else "INFO"
+    logger.remove()
+    logger.add(sys.stderr, level=loguru_level)
+
     opts = yolo_app.init_options(opts_dict)
     main = yolo_app.MainWrapper(opts)
+    logger.info("host: {}, port: {}".format(host, port))
     main.init()
     u = UDPApp(host, port, main, 123)
     main.set_on_detect_yolo(u.on_detect_yolo)
