@@ -6,9 +6,11 @@ project(Yolo-FastestV2)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(OpenCV REQUIRED)
-
-
+if(DEFINED OpenCV_DIR)
+    find_package(OpenCV REQUIRED PATHS ${OpenCV_DIR})
+else()
+    find_package(OpenCV REQUIRED)
+endif()
 
 ## Pybind11
 ## https://pybind11.readthedocs.io/en/latest/compiling.html#building-with-cmake
@@ -27,9 +29,12 @@ add_subdirectory(${PYBIND11_DIR})
 
 # python-config --includes
 # -I/usr/include/python3.10 -I/usr/include/python3.10
-set(Python3_INCLUDE_DIR /usr/include/python3.10)
-include_directories(${Python3_INCLUDE_DIR})
-set(Python3_LIBRARY /usr/lib/libpython3.10.so)
+if (NOT DEFINED Python3_INCLUDE_DIRS)
+    set(Python3_INCLUDE_DIR /usr/include/python3.10)
+endif ()
+if (NOT DEFINED Python3_LIBRARY)
+    set(Python3_LIBRARY /usr/lib/libpython3.10.so)
+endif ()
 
 # target spdlog
 # you can just comment this line if you want to system library
@@ -125,7 +130,7 @@ target_include_directories(Yolo-FastestV2 PUBLIC ${REDIS_PLUS_PLUS_HEADER})
 find_library(REDIS_PLUS_PLUS_LIB redis++)
 target_link_libraries(Yolo-FastestV2 ${REDIS_PLUS_PLUS_LIB})
 
-include_directories(${OpenCV_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} ${MAIN_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} ${MAIN_INCLUDE_DIRS})
 
 target_link_libraries(Yolo-FastestV2 ${NCNN_LIBS})
 target_link_libraries(Yolo-FastestV2 spdlog::spdlog)

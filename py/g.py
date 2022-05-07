@@ -198,7 +198,6 @@ class UDPApp:
                                        chan,
                                        Code.BUSY.value)
                     self.sock.send(resp)
-
         elif h == MsgType.RTMP_STOP.value:
             head: int
             hash: int
