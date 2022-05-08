@@ -108,7 +108,7 @@ ffmpeg -re -i demo.flv -c copy -f flv rtmp://localhost:1935/live/rfBd56ti2SMtYvS
 python3 g.py --host 192.168.123.43 -d
 ```
 
-GStreamer + [gstreamer-rockchip-extra
+GStreamer + [gstreamer-rockchip](https://github.com/crosstyan/gstreamer-rockchip) (fork form [firefly-linux/external/gstreamer-rockchip](https://gitlab.com/firefly-linux/external/gstreamer-rockchip)) + [gstreamer-rockchip-extra
 ](https://github.com/TinkerBoard/gstreamer-rockchip-extra) and
 [rockchip-linux/mpp](https://github.com/rockchip-linux/mpp)
 
