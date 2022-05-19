@@ -1,8 +1,9 @@
+from ast import While
 import os
 import time
 import sys
 import gevent
-from gevent import socket, Greenlet
+from gevent import socket, Greenlet, sleep
 from toolz import mapcat as flatmap
 from e_helper import *
 from typing import List, TypeVar
@@ -10,6 +11,8 @@ import hy
 import asyncio  # I know asyncio but there not too much udp library
 # import logging
 from loguru import logger
+from bmp180 import bmp180
+from mpu6050 import mpu6050
 import struct
 import argparse
 
@@ -177,7 +180,7 @@ class UDPApp:
                 logger.info("Receive RTMP Channel {}".format(chn_s))
                 if (self.app.get_pull_task_state() == False):
                     self.reset_poll()
-                    self.app.clear_queue()
+                    # self.app.clear_queue()
 
                     self.app.set_max_poll(stream_max_poll)
                     self.app.start_poll(gen_pipeline(chn_s))
@@ -234,18 +237,43 @@ class UDPApp:
             data, address = self.sock.recvfrom(1024)
             logger.debug("{} from {}".format(data.hex(), address))
             self.handle_req(data)
+    def bmp_forever(self):
+        bmp = bmp180(0x77)
+        while(True):
+            pressure = bmp.get_pressure()
+            req = struct.pack(MsgStruct.PRESSURE_CLIENT.value,
+                              MsgType.PRESSURE.value,
+                              self.hash,
+                              pressure)
+            self.sock.send(req)
+            logger.debug("Pressure: {} Pascal".format(pressure))
+            sleep(1)
+    def mpu6050_forever(self):
+        sensor = mpu6050(0x68)
+        while True:
+            accel_data = sensor.get_accel_data()
+            x = accel_data['x']
+            y = accel_data['y']
+            z = accel_data['z']
+            req = struct.pack(MsgStruct.ACCEL_CLIENT.value,
+                              MsgType.ACC.value,
+                              self.hash,
+                              x, y, z)
+            self.sock.send(req)
+            logger.debug("x: {}, y: {}, z: {}".format(x, y, z))
+            sleep(1)
 
 
 def run_main():
     main.run_push()
     main.run_pull()
     main.set_max_poll(emerg_max_poll)
-    # gevent.sleep(10)
+    # sleep(10)
     # main.reset_poll()
     # main.start_poll(gen_pipeline(u.e_chan))
-    # gevent.sleep(10)
+    # sleep(10)
     # u.send_request_e_chan()
-    # gevent.sleep(1)
+    # sleep(1)
     # main.reset_poll()
     # main.start_poll(gen_pipeline(u.e_chan))
 
@@ -257,18 +285,20 @@ if __name__ == "__main__":
     is_debug = args.debug
     base_rtmp_url = "rtmp://{}:1935/live/".format(host)
     opts_dict = {
-        "input_file_path": "0",
-        # "input_file_path": os.path.join(so_root, "test.mp4"),
+        # "input_file_path": "0",
+        "input_file_path": os.path.join(pwd, "test.mp4"),
+        # "input_file_path": "/home/crosstyan/Code/ncnn/py/test (115).mp4",
         "output_file_path": "",
         "param_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.param"),
         "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
         "rtmp_url": base_rtmp_url + default_chan,
         "redis_url": "tcp://127.0.0.1:6379",
-        "scaled_coeffs": 0.2,
+        "scaled_coeffs": 0.8,
         "threshold_NMS": 0.125,
         "out_fps": 6,
         "crop_coeffs": 0.1,
         "threads_num": 4,
+        "is_border": False,
         "is_debug": is_debug,
     }
 
@@ -288,7 +318,10 @@ if __name__ == "__main__":
     main.set_on_poll_complete(u.on_poll_complete)
     # https://sdiehl.github.io/gevent-tutorial/
     g = gevent.spawn(u.serve_forever)
-    send_init = gevent.spawn(u.send_init_req())
+    send_init = gevent.spawn(u.send_init_req)
     run_g = gevent.spawn(run_main)
+    mpu = gevent.spawn(u.mpu6050_forever)
+    bmp = gevent.spawn(u.bmp_forever)
     g.start()
-    gevent.joinall([g, send_init, run_g])
+    # gevent.joinall([g, send_init, run_g])
+    gevent.joinall([g, send_init, run_g, mpu, bmp])

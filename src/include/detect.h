@@ -28,6 +28,7 @@ namespace YoloApp {
     // Maybe I should use the exact coordinate
     float cropCoeffs = 0.1;
     float outFps = 5;
+    bool isBorder = false; // if true, display elevator door detect border
     bool isDebug = false;
   };
 

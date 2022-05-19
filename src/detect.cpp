@@ -176,7 +176,9 @@ int VideoHandler::run() {
     auto croppedImg = cvImgResized(cropRect);
 
     detectDoor(croppedImg, cvImgResized, cropRect, onDetectDoor);
-    cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
+    if (opts.isBorder){
+      cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
+    }
     auto boxes = detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
     drawTime(cvImgResized);
 

@@ -32,6 +32,7 @@ namespace YoloApp::Main {
     float outFps = 0.0;
     float cropCoeffs = 0.1;
     int threadsNum = 4;
+    bool isBorder = false; // if true, display elevator door detect border
     bool isDebug = false;
   };
 

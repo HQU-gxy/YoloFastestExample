@@ -157,6 +157,39 @@ This will stop both emerg and normal streaming.
 
 No Response
 
+### Pressure
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x90     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| Pressure         | 4      | float | -          | https://en.wikipedia.org/wiki/IEEE_754[IEEE 754] Raw Pressure unconverted
+|===
+
+No Response
+
+### Accelerometer
+
+#### Client
+
+[cols="1,1,1,1,1"]
+|===
+| meaning      | length | type | range      | comment
+
+| Message type | 1      | -      | 0x88     | -
+| Hash         | 4      | hash | -          | you can interpret it as uint32
+| X-acceleration         | 4      | float | -          | https://en.wikipedia.org/wiki/IEEE_754[IEEE 754]
+| Y-acceleration         | 4      | float | -          | https://en.wikipedia.org/wiki/IEEE_754[IEEE 754]
+| Z-acceleration         | 4      | float | -          | https://en.wikipedia.org/wiki/IEEE_754[IEEE 754]
+
+|===
+
+No Response
+
 ### Error
 
 [cols="1,1,1"]

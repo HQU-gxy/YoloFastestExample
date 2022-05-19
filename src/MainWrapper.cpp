@@ -94,6 +94,7 @@ m::Options m::OptionsFromPyDict(const py::dict &dict) {
       .outFps = dict["out_fps"].cast<float>(),
       .cropCoeffs = dict["crop_coeffs"].cast<float>(),
       .threadsNum = dict["threads_num"].cast<int>(),
+      .isBorder = dict["is_border"].cast<bool>(),
       .isDebug = dict["is_debug"].cast<bool>(),
   };
   return opts;
@@ -210,6 +211,7 @@ y::Options m::toVideoOptions(const m::Options &opts) {
       .scaledCoeffs = opts.scaledCoeffs,
       .cropCoeffs = opts.cropCoeffs,
       .outFps = opts.outFps,
+      .isBorder = opts.isBorder,
       .isDebug = opts.isDebug,
   };
   return vopts;

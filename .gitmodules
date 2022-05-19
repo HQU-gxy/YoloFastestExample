@@ -19,3 +19,9 @@
 [submodule "lib/pybind11"]
 	path = lib/pybind11
 	url = https://github.com/pybind/pybind11
+[submodule "py/mpu6050"]
+	path = py/mpu6050
+	url = https://github.com/crosstyan/mpu6050
+[submodule "py/bmp180"]
+	path = py/bmp180
+	url = https://github.com/crosstyan/bmp180
