@@ -22,15 +22,15 @@ namespace YoloApp::Main {
 
   struct Options {
     std::string inputFilePath;
-    std::string outputFileName;
     std::string paramPath;
     std::string binPath;
-    std::string rtmpUrl;
     std::string redisUrl = "tcp://127.0.0.1:6379";
     float scaledCoeffs = 1.0;
     float thresholdNMS = 0.1;
-    float outFps = 0.0;
-    float cropCoeffs = 0.1;
+    int targetInputWidth = -1; // target means MAYBE the value will be set
+    int targetInputHeight = -1; // maybe not
+    float targetInputFPS = -1;
+    float outputFPS = -1;
     int threadsNum = 4;
     bool isBorder = false; // if true, display elevator door detect border
     bool isDebug = false;
@@ -81,6 +81,9 @@ namespace YoloApp::Main {
 
     void enablePoll();
     void startPoll(std::string pipeline);
+
+    int setCropRect(int x, int y, int w, int h);
+    void setYoloState(bool isYolo);
   };
 
   static YoloApp::Options toVideoOptions(const Options &opts);

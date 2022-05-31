@@ -31,9 +31,7 @@ void m::MainWrapper::init() {
 
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, videoOpts);
-  this->capsProps = std::make_unique<CapProps>(recognize->getCapProps());
-  // make sure the parameter of PullTask is by value
-  // or RAII will release writer and cause problems.
+  this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
   this->pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, videoOpts, this->pullRedis);
 }
 
@@ -84,15 +82,15 @@ std::thread m::MainWrapper::pullRun() {
 m::Options m::OptionsFromPyDict(const py::dict &dict) {
   auto opts = YoloApp::Main::Options{
       .inputFilePath = dict["input_file_path"].cast<std::string>(),
-      .outputFileName = dict["output_file_path"].cast<std::string>(),
       .paramPath = dict["param_path"].cast<std::string>(),
       .binPath = dict["bin_path"].cast<std::string>(),
-      .rtmpUrl = dict["rtmp_url"].cast<std::string>(),
       .redisUrl = dict["redis_url"].cast<std::string>(),
       .scaledCoeffs = dict["scaled_coeffs"].cast<float>(),
       .thresholdNMS = dict["threshold_NMS"].cast<float>(),
-      .outFps = dict["out_fps"].cast<float>(),
-      .cropCoeffs = dict["crop_coeffs"].cast<float>(),
+      .targetInputWidth = dict["target_input_width"].cast<int>(),
+      .targetInputHeight = dict["target_input_height"].cast<int>(),
+      .targetInputFPS = dict["target_input_fps"].cast<float>(),
+      .outputFPS = dict["out_fps"].cast<float>(),
       .threadsNum = dict["threads_num"].cast<int>(),
       .isBorder = dict["is_border"].cast<bool>(),
       .isDebug = dict["is_debug"].cast<bool>(),
@@ -204,13 +202,27 @@ void YoloApp::Main::MainWrapper::clearQueue() {
   this->pullJob->clearQueue();
 }
 
+int YoloApp::Main::MainWrapper::setCropRect(int x, int y, int w, int h) {
+  if (this->handler == nullptr) {
+    throw std::runtime_error("Handler is uninitialized");
+  }
+  return this->handler->setCropRect(x, y, w, h);
+}
+
+void YoloApp::Main::MainWrapper::setYoloState(bool isYolo) {
+  if (this->handler == nullptr) {
+    throw std::runtime_error("Handler is uninitialized");
+  }
+  this->handler->isYolo = isYolo;
+}
+
 y::Options m::toVideoOptions(const m::Options &opts) {
   YoloApp::Options vopts{
-      .outputFileName = opts.outputFileName,
-      .rtmpUrl = opts.rtmpUrl,
       .scaledCoeffs = opts.scaledCoeffs,
-      .cropCoeffs = opts.cropCoeffs,
-      .outFps = opts.outFps,
+      .targetInputWidth = opts.targetInputWidth,
+      .targetInputHeight = opts.targetInputHeight,
+      .targetInputFPS = opts.targetInputFPS,
+      .outputFPS = opts.outputFPS,
       .isBorder = opts.isBorder,
       .isDebug = opts.isDebug,
   };

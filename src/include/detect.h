@@ -10,8 +10,6 @@
 #include <sw/redis++/redis++.h>
 #include "spdlog/spdlog.h"
 
-// Use namespace to avoid conflict with other libraries
-// But define a namespace
 namespace YoloApp {
   enum Error {
     SUCCESS = 0,
@@ -20,15 +18,15 @@ namespace YoloApp {
 
   extern bool IS_CAPTURE_ENABLED;
   extern const std::vector<char const *> classNames;
-  extern const std::string base_pipeline;
+
+  // This shit should be global variable/singleton. Maybe.
   struct Options {
-    std::string outputFileName;
-    std::string rtmpUrl;
     float scaledCoeffs = 1.0;
-    // Maybe I should use the exact coordinate
-    float cropCoeffs = 0.1;
-    float outFps = 5;
-    bool isBorder = false; // if true, display elevator door detect border
+    int targetInputWidth = -1; // target means MAYBE the value will be set
+    int targetInputHeight = -1; // maybe not
+    float targetInputFPS = -1;
+    float outputFPS = 5; // Should be set if input is Web Camera, but not if input is video file (set the value to a negative number)
+    bool isBorder = true; // if true, display elevator door detect border
     bool isDebug = false;
   };
 
@@ -58,24 +56,29 @@ namespace YoloApp {
   private:
     std::function<void(const std::vector<pt_pair> &)> onDetectDoor = [](const std::vector<pt_pair> &) {};
     std::function<void(const std::vector<TargetBox> &)> onDetectYolo = [](const std::vector<TargetBox> &) {};
-//    std::function<void(const std::string &)> onError = [](const std::string &) {};
-//    std::function<void(const std::string &)> onInfo = [](const std::string &) {};
     cv::VideoCapture &cap;
     YoloFastestV2 &api;
-//    cv::VideoWriter &video_writer;
-  public:
-    void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
 
+    int frame_width;
+    int frame_height;
+    int frame_fps;
+    int frame_count;
+    cv::Rect cropRect;
+  public:
+    YoloApp::CapProps getCapProps();
+
+    int setCropRect(int x, int y, int w, int h);
+    void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
 
     sw::redis::Redis &redis;
     const std::vector<const char *> classNames;
     YoloApp::Options opts;
     bool isWriteRedis = true;
-  public:
+    bool isYolo = true;
+
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                  const std::vector<const char *> classNames, const YoloApp::Options opts);
-
     int run();
 
   };

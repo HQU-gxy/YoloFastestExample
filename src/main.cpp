@@ -39,15 +39,12 @@ int main(int argc, char **argv) {
   // Thank you copilot
   auto opts = YoloApp::Main::Options{
       .inputFilePath = inputFilePath,
-      .outputFileName = outputFileName,
       .paramPath = paramPath,
       .binPath = binPath,
-      .rtmpUrl = rtmpUrl,
       .redisUrl = redisUrl,
       .scaledCoeffs = scaledCoeffs,
       .thresholdNMS = thresholdNMS,
-      .outFps = outFps,
-      .cropCoeffs = cropCoeffs,
+      .outputFPS = outFps,
       .threadsNum = threadsNum,
       .isDebug = isDebug,
   };

@@ -29,12 +29,6 @@ const std::vector<char const *> YoloApp::classNames = {
     "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
     "hair drier", "toothbrush"
 };
-const std::string YoloApp::base_pipeline = "appsrc ! "
-                                           "videoconvert ! "
-                                           "x264enc  pass=5 quantizer=25 speed-preset=6 ! "
-                                           "video/x-h264, profile=baseline ! "
-                                           "flvmux ! "
-                                           "rtmpsink location=";
 
 /// not a pure function, will modify the drawImg
 /// @param classNames  the name of the class to be detected (array of strings)
@@ -57,10 +51,12 @@ YoloApp::detectFrame(cv::Mat &detectImg,
 
     int x = box.x1;
     int y = box.y1 - label_size.height - baseLine;
-    if (y < 0)
+    if (y < 0) {
       y = 0;
-    if (x + label_size.width > detectImg.cols)
+    }
+    if (x + label_size.width > detectImg.cols) {
       x = detectImg.cols - label_size.width;
+    }
 
     cv::rectangle(drawImg, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
                   cv::Scalar(255, 255, 255), -1);
@@ -83,7 +79,9 @@ auto drawTime(cv::Mat &drawImg) {
   // add current time
   auto now = std::chrono::system_clock::now();
   auto formatted = date::format("%Y-%m-%d %H:%M:%S", now);
-  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1,
+  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 2,
+              cv::LINE_AA);
+  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1,
               cv::LINE_AA);
 }
 
@@ -136,27 +134,67 @@ YoloApp::CapProps YoloApp::getCapProps(cv::VideoCapture &cap) {
   };
 }
 
+YoloApp::CapProps VideoHandler::getCapProps() {
+  return {
+      1.0 * frame_width, // a trick converting int to double
+      1.0 * frame_height,
+      cap.get(cv::CAP_PROP_FPS),
+  };
+}
+
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
 VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                            const std::vector<const char *> classNames, const YoloApp::Options opts)
-    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {}
+    : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {
+
+  frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+  frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+  frame_fps = cap.get(cv::CAP_PROP_FPS);
+  frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
+
+  spdlog::debug("Default video size: {}x{}", frame_width, frame_height);
+  spdlog::debug("Default video fps: {}", frame_fps);
+  spdlog::debug("Video frame count: {}", frame_count);
+
+  // convention: targetInputWidth less than zero, then use default parameter.
+  if (opts.targetInputWidth > 0 && opts.targetInputHeight > 0) {
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, opts.targetInputWidth);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, opts.targetInputHeight);
+    frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+    spdlog::debug("Try to set video to size: {}x{}, result {}x{}",
+                  opts.targetInputWidth, opts.targetInputHeight,
+                  frame_width, frame_height);
+  }
+
+  if (opts.targetInputFPS > 0) {
+    cap.set(cv::CAP_PROP_FPS, opts.targetInputFPS);
+    frame_fps = cap.get(cv::CAP_PROP_FPS);
+    spdlog::debug("Try to set video FPS to {}, result {}", opts.targetInputFPS, frame_fps);
+  }
+
+  redis.del("image"); // TODO: why the key of redis is hardcoded
+
+
+  if (opts.scaledCoeffs < 0 || opts.scaledCoeffs > 1) {
+    spdlog::warn("scaledCoeffs should be between 0 and 1. Image will not be resized");
+  } else {
+    frame_width = frame_width * opts.scaledCoeffs;
+    frame_height = frame_height * opts.scaledCoeffs;
+    spdlog::debug("Final video size: {}x{} with scaledCoeffs {}", frame_width, frame_height, opts.scaledCoeffs);
+  }
+
+  // set default rectangle
+  const auto CROP_COEF = 0.1;
+  const auto vertical_middle = frame_width / 2;
+  const auto crop_right_pt = vertical_middle + (frame_width * CROP_COEF);
+  const auto crop_left_pt = vertical_middle - (frame_width * CROP_COEF);
+  const auto length = crop_right_pt - crop_left_pt;
+  this->cropRect = cv::Rect(crop_left_pt, 0, length, length);
+}
 
 int VideoHandler::run() {
-  const int frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-  const int frame_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-  const int frame_fps = cap.get(cv::CAP_PROP_FPS);
-  const int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
   int real_frame_count = 0;
-  const auto CROP_COEF = opts.cropCoeffs;
-
-  auto out_framerate = opts.outFps == 0 ? frame_fps : opts.outFps;
-
-  spdlog::debug("Original video size: {}x{}", frame_width, frame_height);
-  spdlog::debug("Output video size: {}x{}", frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs);
-  spdlog::debug("Original video fps: {}", frame_fps);
-  spdlog::debug("Output video fps: {}", out_framerate);
-  spdlog::debug("Original video frame count: {}", frame_count);
-  redis.del("image"); // TODO: why the key of redis is hardcoded
   while (YoloApp::IS_CAPTURE_ENABLED) {
     cv::Mat cvImg;
     cv::Mat cvImgResized;
@@ -165,21 +203,23 @@ int VideoHandler::run() {
       break;
     }
     auto start = ncnn::get_current_time();
-    cv::resize(cvImg, cvImgResized, cv::Size(frame_width * opts.scaledCoeffs, frame_height * opts.scaledCoeffs));
+    if (opts.scaledCoeffs < 0 || opts.scaledCoeffs > 1) {
+      cvImgResized = std::move(cvImg);
+    } else {
+      cv::resize(cvImg, cvImgResized, cv::Size(frame_width, frame_height));
+    }
 
-    const auto vertical_middle = frame_width * opts.scaledCoeffs / 2;
-    const auto crop_right_pt = vertical_middle + (frame_width * opts.scaledCoeffs * CROP_COEF);
-    const auto crop_left_pt = vertical_middle - (frame_width * opts.scaledCoeffs * CROP_COEF);
-    const auto length = crop_right_pt - crop_left_pt;
-    auto cropRect = cv::Rect(crop_left_pt, 0, length, length);
     auto origImg = cvImgResized.clone();
     auto croppedImg = cvImgResized(cropRect);
 
     detectDoor(croppedImg, cvImgResized, cropRect, onDetectDoor);
-    if (opts.isBorder){
+    if (opts.isBorder) {
       cv::rectangle(cvImgResized, cropRect, cv::Scalar(0, 204, 255), 1, cv::LINE_AA);
     }
-    auto boxes = detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
+    // boxes should not be used
+    if (this->isYolo) {
+      detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
+    }
     drawTime(cvImgResized);
 
 
@@ -212,14 +252,14 @@ int VideoHandler::run() {
     // Debug info
     if (opts.isDebug) {
       real_frame_count++;
-      if (real_frame_count > (INT_MAX - 10)){
+      if (real_frame_count > (INT_MAX - 10)) {
         spdlog::warn("Frame count will be exceeded. Reset to 0");
         real_frame_count = 0;
       }
       if (frame_count > 0) {
         spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
       } else {
-        spdlog::debug("[{}]\t{} ms", real_frame_count, end - start);
+        spdlog::debug("[{}]\t{} ms Yolo:{}", real_frame_count, end - start, this->isYolo);
       }
     }
   }
@@ -235,11 +275,12 @@ void PullTask::run() {
       /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
       if (this->writer != nullptr && !pipeline.empty()) {
         if (!this->writer->isOpened()) {
-          spdlog::debug("Opening Video Writer");
           auto[frame_width, frame_height, frame_fps] = capProps;
-          auto out_framerate = this->opts.outFps == 0 ? frame_fps : this->opts.outFps;
+          auto out_framerate = this->opts.outputFPS > 0 ? this->opts.outputFPS : frame_fps;
+          spdlog::debug("Opening Video Writer with {}x{} and {} fps", frame_width, frame_height, out_framerate);
+
           this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                             cv::Size(frame_width * this->opts.scaledCoeffs, frame_height * this->opts.scaledCoeffs));
+                             cv::Size(frame_width, frame_height));
         }
       }
       auto redisMemory = this->redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
@@ -249,7 +290,6 @@ void PullTask::run() {
         continue;
       }
       auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
-      // spdlog::debug("Received Vector Length: {}", vector.size());
       auto start = ncnn::get_current_time();
       auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
       if (image.empty()) {
@@ -280,7 +320,7 @@ void PullTask::clearQueue() {
 };
 
 PullTask::PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
-                                                                              redis(redis) {}
+                                                                               redis(redis) {}
 
 void PullTask::setVideoWriter(std::string pipe) {
   this->pipeline = std::move(pipe);
@@ -288,8 +328,8 @@ void PullTask::setVideoWriter(std::string pipe) {
     this->writer->release();
   }
   this->writer = std::make_unique<cv::VideoWriter>();
-  // make an empty writer not opened
-  // the opening will be finished in PullTask::run()
+  // make an empty writer without opening it
+  // the opening operation will be finished in PullTask::run()
 }
 
 void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
@@ -298,4 +338,22 @@ void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt
 
 void VideoHandler::setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
   VideoHandler::onDetectYolo = onDetectYolo;
+}
+
+int VideoHandler::setCropRect(int x, int y, int w, int h) {
+  if (x < 0 || y < 0 || w <= 0 || h <= 0) {
+    spdlog::error("Input should be positive");
+    return YoloApp::Error::FAILURE;
+  }
+  auto image_rect = cv::Rect(0, 0, frame_width, frame_height);
+  auto rect = cv::Rect(x, y, w, h);
+  // See https://stackoverflow.com/questions/29120231/how-to-verify-if-rect-is-inside-cvmat-in-opencv
+  bool is_valid = (rect & image_rect) == rect;
+  if (!is_valid) {
+    spdlog::error("Invalid crop rect. Out of image boundary.");
+    return YoloApp::Error::FAILURE;
+  } else {
+    this->cropRect = rect;
+    return YoloApp::Error::SUCCESS;
+  }
 }
