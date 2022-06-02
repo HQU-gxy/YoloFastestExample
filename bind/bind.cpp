@@ -35,16 +35,15 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
       .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
       .def("set_on_poll_complete", &m::MainWrapper::setOnPollComplete)
+      .def("set_yolo_state", &m::MainWrapper::setYoloState)
+      .def("set_crop_rect", &m::MainWrapper::setCropRect)
       .def("get_poll", &m::MainWrapper::getPoll)
       .def("get_max_poll", &m::MainWrapper::getMaxPoll)
       .def("set_max_poll", &m::MainWrapper::setMaxPoll)
       .def("reset_poll", &m::MainWrapper::resetPoll)
       .def("_enable_poll", &m::MainWrapper::enablePoll)
       .def("start_poll", &m::MainWrapper::startPoll)
-      .def("clear_queue", &m::MainWrapper::clearQueue)
-      .def("__repr__", [](const m::MainWrapper &m) {
-        return "<MainWrapper>";
-      });
+      .def("clear_queue", &m::MainWrapper::clearQueue);
 
   py::class_<TargetBox>(m, "TargetBox")
       .def_readwrite("x1", &TargetBox::x1)

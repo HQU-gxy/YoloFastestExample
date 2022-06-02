@@ -259,7 +259,7 @@ int VideoHandler::run() {
       if (frame_count > 0) {
         spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
       } else {
-        spdlog::debug("[{}]\t{} ms Yolo:{}", real_frame_count, end - start, this->isYolo);
+        spdlog::debug("[{}]\t{} ms\tYolo:{}", real_frame_count, end - start, this->isYolo);
       }
     }
   }

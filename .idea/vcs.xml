@@ -8,5 +8,7 @@
     <mapping directory="$PROJECT_DIR$/lib/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/redis-plus-plus" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/spdlog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/py/bmp180" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/py/mpu6050" vcs="Git" />
   </component>
 </project>
