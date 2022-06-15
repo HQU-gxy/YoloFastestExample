@@ -11,20 +11,6 @@ namespace py = pybind11;
 
 using namespace YoloApp;
 
-/// a global flag in order to make signal function work
-bool YoloApp::IS_CAPTURE_ENABLED = true;
-const std::vector<char const *> YoloApp::classNames = {
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-    "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-    "hair drier", "toothbrush"
-};
-
 /// not a pure function, will modify the drawImg
 /// @param classNames  the name of the class to be detected (array of strings)
 std::vector<TargetBox>
@@ -72,8 +58,9 @@ YoloApp::detectFrame(cv::Mat &detectImg,
 
 auto drawTime(cv::Mat &drawImg) {
   // add current time
+  // https://github.com/HowardHinnant/date/issues/543
   auto now = std::chrono::system_clock::now();
-  auto formatted = date::format("%Y-%m-%d %H:%M:%S", now);
+  auto formatted = date::format("%Y-%m-%d %H:%M:%S", date::floor<std::chrono::seconds>(now));
   cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 2,
               cv::LINE_AA);
   cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1,
