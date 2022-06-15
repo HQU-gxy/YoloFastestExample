@@ -294,6 +294,7 @@ if __name__ == "__main__":
     g = gevent.spawn(u.serve_forever)
     run_g = gevent.spawn(run_main)
     s = gevent.spawn(u.send_status_forever)
+    sensor = gevent.spawn(u.read_sensor_forever)
     send_init = gevent.spawn(u.send_init_req)
     g.start()
-    gevent.joinall([g, send_init, s, run_g])
+    gevent.joinall([g, send_init, s, run_g, sensor])
