@@ -18,8 +18,6 @@ const std::vector<char const *> YoloApp::classNames = {
     "hair drier", "toothbrush"
 };
 
-
-
 using namespace YoloApp;
 #ifndef _STANDALONE_ON
 std::shared_ptr<Options> Options::fromPyDict(const py::dict &dict) {
@@ -37,6 +35,8 @@ std::shared_ptr<Options> Options::fromPyDict(const py::dict &dict) {
   instance->threadsNum = dict["threads_num"].cast<int>();
   instance->isBorder = dict["is_border"].cast<bool>();
   instance->isDebug = dict["is_debug"].cast<bool>();
+  instance->cacheKey = dict["cache_key"].cast<std::string>();
+  instance->altCacheKey = dict["alt_cache_key"].cast<std::string>();
   return instance;
 }
 #endif

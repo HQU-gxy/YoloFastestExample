@@ -30,6 +30,8 @@ namespace YoloApp {
     std::string paramPath;
     std::string binPath;
     std::string redisUrl = "tcp://127.0.0.1:6379";
+    std::string cacheKey = "image";
+    std::string altCacheKey = "alt_image";
     float scaledCoeffs = 1.0;
     int targetInputWidth = -1; // target means MAYBE the value will be set
     int targetInputHeight = -1; // maybe not

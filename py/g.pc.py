@@ -280,13 +280,13 @@ if __name__ == "__main__":
         "is_debug": is_debug,
     }
 
+    opts = yolo_app.Options.init(opts_dict)
     # https://loguru.readthedocs.io/en/stable/resources/recipes.html#changing-the-level-of-an-existing-handler
     # https://github.com/Delgan/loguru/issues/138
     loguru_level = "DEBUG" if is_debug else "INFO"
     logger.remove()
     logger.add(sys.stderr, level=loguru_level)
 
-    opts = yolo_app.init_options(opts_dict)
     main = yolo_app.MainWrapper(opts)
     logger.info("host: {}, port: {}".format(host, port))
     main.init()

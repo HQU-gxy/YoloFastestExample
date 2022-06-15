@@ -30,7 +30,7 @@ namespace YoloApp::Main {
 
   public:
 
-    MainWrapper();
+    explicit MainWrapper(YoloApp::Options &opts);
     void init();
     std::thread pullRun();
     std::thread pushRun();

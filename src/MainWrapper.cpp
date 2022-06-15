@@ -77,9 +77,9 @@ std::thread m::MainWrapper::pullRun() {
   return pullTask;
 }
 
-m::MainWrapper::MainWrapper()
+m::MainWrapper::MainWrapper(y::Options &opts)
     : api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
-      opts(*y::Options::get()),
+      opts(opts),
       pullRedis(opts.redisUrl),
       pushRedis(opts.redisUrl) {
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());

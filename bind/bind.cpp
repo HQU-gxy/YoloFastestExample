@@ -22,7 +22,6 @@ PYBIND11_MODULE(yolo_app, m) {
           .. autosummary::
              :toctree: _generate
       )pbdoc";
-  m.def("init_options", &y::Options::fromPyDict);
   py::class_<y::Options>(m, "Options")
       .def_readwrite("input_file_path", &y::Options::inputFilePath)
       .def_readwrite("param_path", &y::Options::paramPath)
@@ -30,9 +29,10 @@ PYBIND11_MODULE(yolo_app, m) {
       .def_readwrite("redis_url", &y::Options::redisUrl)
       .def_readwrite("scaled_coeffs", &y::Options::scaledCoeffs)
       .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
-      .def_readwrite("is_border", &y::Options::isBorder);
+      .def_readwrite("is_border", &y::Options::isBorder)
+      .def_static("init", &y::Options::fromPyDict);
   py::class_<m::MainWrapper>(m, "MainWrapper")
-      .def(py::init())
+      .def(py::init<y::Options &>())
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)

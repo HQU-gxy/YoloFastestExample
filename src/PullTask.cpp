@@ -8,7 +8,6 @@ using namespace YoloApp;
 void PullTask::run() {
   while (YoloApp::IS_CAPTURE_ENABLED) {
     if (this->isReadRedis) {
-      //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
       /// It's wasteful to copy the data, but it's the only way to get the data
       /// without causing problems.
       /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
@@ -22,7 +21,7 @@ void PullTask::run() {
                              cv::Size(frame_width, frame_height));
         }
       }
-      auto redisMemory = this->redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
+      auto redisMemory = this->redis.brpop(opts.cacheKey, 0)
           .value_or(std::make_pair("", ""))
           .second;
       if (redisMemory.empty()) {
@@ -55,8 +54,8 @@ void PullTask::run() {
 
 
 void PullTask::clearQueue() {
-  this->redis.del("image"); // TODO: why the key of redis is hardcoded
-};
+  this->redis.del(opts.cacheKey);
+}
 
 PullTask::PullTask(CapProps capProps, Options &opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
                                                                                 redis(redis) {}

@@ -48,12 +48,8 @@ namespace YoloApp {
 
   };
 
-  // TODO: handle output file name differently
   class Video : public VideoInterface {
   public:
-    // TODO: Video writes to writer directly
-    // Don't write to redis
-    // No idea why segfault
     inline Video(const std::string inputFileName) : VideoInterface(inputFileName) {
       this->type = "Video";
       spdlog::debug("Input File is {}", type);

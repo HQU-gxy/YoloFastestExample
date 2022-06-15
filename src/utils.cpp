@@ -14,7 +14,6 @@ namespace YoloApp {
     });
     spdlog::debug("Input file extension: {}", inputExtension);
     if (exists(inputPath)) {
-      // TODO: consider to use pattern matching
       if (inputExtension == ".jpg" || inputExtension == ".jpeg" || inputExtension == ".png") {
         if (exists(inputPath)) {}
         return FileType::Image;

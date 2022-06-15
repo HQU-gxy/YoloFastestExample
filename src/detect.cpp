@@ -155,7 +155,7 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis:
     spdlog::debug("Try to set video FPS to {}, result {}", opts.targetInputFPS, frame_fps);
   }
 
-  redis.del("image"); // TODO: why the key of redis is hardcoded
+  redis.del(opts.cacheKey);
 
 
   if (opts.scaledCoeffs < 0 || opts.scaledCoeffs > 1) {
@@ -212,16 +212,16 @@ int VideoHandler::run() {
 
       // spdlog::debug("Send Vector Length: {}", buf.size());
       if (success) {
-        auto len = redis.llen("image");
+        auto len = redis.llen(opts.cacheKey);
         // 1500 is the max length of the queue
         // TODO I shouldn't use magic number
         if (len < 1500) {
           // spdlog::debug("Redis List length: {}", len);
           // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
-          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+          redis.lpush(opts.cacheKey, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
         } else {
-          redis.rpop("image");
-          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+          redis.rpop(opts.cacheKey);
+          redis.lpush(opts.cacheKey, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
         }
       } else {
         spdlog::error("Failed to encode image");
