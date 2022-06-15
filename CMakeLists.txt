@@ -96,6 +96,7 @@ set(MAIN_INCLUDE_DIRS src/include)
 set(MAIN_SRC
         src/utils.cpp
         src/detect.cpp
+        src/PullTask.cpp
         src/include/VideoInterface.h
         src/VideoInterface.cpp
         src/MainWrapper.cpp

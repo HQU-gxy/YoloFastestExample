@@ -5,10 +5,12 @@
 #ifndef YOLO_FASTESTV2_MAINWRAPPER_H
 #define YOLO_FASTESTV2_MAINWRAPPER_H
 
+#ifdef _STANDALONE_ON
 #include <csignal>
+#endif
 #include <future>
 #include <functional>
-#include "detect.h"
+#include "PullTask.h"
 #include "VideoInterface.h"
 
 #ifndef _STANDALONE_ON

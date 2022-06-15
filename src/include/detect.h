@@ -8,7 +8,11 @@
 #include "yolo-fastestv2.h"
 #include <benchmark.h>
 #include <sw/redis++/redis++.h>
+#include <pybind11/pybind11.h>
 #include "spdlog/spdlog.h"
+#include "date.h"
+#include <cmath>
+#include <vector>
 
 namespace YoloApp {
   enum Error {
@@ -80,28 +84,8 @@ namespace YoloApp {
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
                  const std::vector<const char *> classNames, const YoloApp::Options opts);
     int run();
-
   };
 
-  class PullTask {
-    std::unique_ptr<cv::VideoWriter> writer = nullptr;
-    sw::redis::Redis &redis;
-  public:
-    CapProps capProps;
-    Options opts;
-    bool isReadRedis = false;
-    int  maxPoll = 1500;
-    int  poll = 0;
-    std::string pipeline;
-    std::function<void(const int &)> onPollComplete = [](const int &) {};
-
-    PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis);
-    void setVideoWriter(std::string pipe);
-
-    void clearQueue();
-
-    void run();
-  };
 
   YoloApp::CapProps getCapProps(cv::VideoCapture &cap);
 }
