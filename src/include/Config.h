@@ -43,6 +43,7 @@ namespace YoloApp {
     int threadsNum = 1;
     bool isBorder = true; // if true, display elevator door detect border
     bool isDebug = false;
+    bool isSaveAlt = true;
   public:
     static std::shared_ptr<Options> get(){
       static auto INSTANCE = std::make_shared<Options>();

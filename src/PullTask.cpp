@@ -5,6 +5,7 @@
 #include "include/PullTask.h"
 
 using namespace YoloApp;
+
 void PullTask::run() {
   while (YoloApp::IS_CAPTURE_ENABLED) {
     if (this->isReadRedis) {
@@ -21,7 +22,7 @@ void PullTask::run() {
                              cv::Size(frame_width, frame_height));
         }
       }
-      auto redisMemory = this->redis.brpop(opts.cacheKey, 0)
+      auto redisMemory = this->redis.brpop(this->redisKey, 0)
           .value_or(std::make_pair("", ""))
           .second;
       if (redisMemory.empty()) {
@@ -40,7 +41,7 @@ void PullTask::run() {
         writer->write(image);
       }
       auto end = ncnn::get_current_time();
-      spdlog::debug("[Pull/{}]\t{} ms", this->poll, end - start);
+      spdlog::debug("[Pull({}) {}/{}]\t{} ms", this->redisKey, this->poll, this->maxPoll, end - start);
       poll++;
       if (poll > this->maxPoll) {
         isReadRedis = false;
@@ -57,8 +58,9 @@ void PullTask::clearQueue() {
   this->redis.del(opts.cacheKey);
 }
 
-PullTask::PullTask(CapProps capProps, Options &opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
-                                                                                redis(redis) {}
+PullTask::PullTask(std::string key, sw::redis::Redis &redis, CapProps capProps, Options &opts)
+    : redisKey(key), capProps(capProps), opts(opts),
+      redis(redis) {}
 
 void PullTask::setVideoWriter(std::string pipe) {
   this->pipeline = std::move(pipe);

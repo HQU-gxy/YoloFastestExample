@@ -53,13 +53,13 @@ namespace YoloApp {
     YoloApp::CapProps getCapProps();
 
     int setCropRect(int x, int y, int w, int h);
+    void saveToRedis(cv::Mat image, std::string key);
     void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
 
     sw::redis::Redis &redis;
     std::vector<const char *> classNames;
     YoloApp::Options &opts;
-    bool isWriteRedis = true;
     bool isYolo = true;
 
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,

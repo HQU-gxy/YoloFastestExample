@@ -61,7 +61,7 @@ base_pipeline = "appsrc ! " + \
                 "x264enc  pass=5 quantizer=25 speed-preset=6 ! " + \
                 "video/x-h264, profile=baseline ! " + \
                 "flvmux ! " + \
-                "rtmpsink location="
+                "rtmpsink sync=false location="
 
 
 # https://www.gevent.org/examples/udp_client.html
@@ -269,6 +269,8 @@ if __name__ == "__main__":
         "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
         "rtmp_url": base_rtmp_url + default_chan,
         "redis_url": "tcp://127.0.0.1:6379",
+        "cache_key": "image1",
+        "alt_cache_key": "image2",
         "target_input_width": 640,
         "target_input_height": 480,
         "target_input_fps": -1,

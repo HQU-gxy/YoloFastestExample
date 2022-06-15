@@ -17,9 +17,10 @@ namespace YoloApp {
     int  maxPoll = 1500;
     int  poll = 0;
     std::string pipeline;
+    std::string redisKey;
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
-    PullTask(CapProps capProps, Options &opts, sw::redis::Redis &redis);
+    PullTask(std::string key, sw::redis::Redis &redis, CapProps capProps, Options &opts);
     void setVideoWriter(std::string pipe);
 
     void clearQueue();

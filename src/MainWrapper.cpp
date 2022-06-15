@@ -32,7 +32,7 @@ void m::MainWrapper::init() {
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, opts);
   this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
-  this->pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, opts, this->pullRedis);
+  this->pullJob = std::make_unique<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
 }
 
 y::Error m::MainWrapper::setPullWriter(std::string pipeline) {

@@ -4,6 +4,7 @@
 
 
 #ifndef _STANDALONE_ON
+
 #include "include/detect.h"
 
 namespace py = pybind11;
@@ -56,14 +57,16 @@ YoloApp::detectFrame(cv::Mat &detectImg,
   return boxes;
 }
 
-auto drawTime(cv::Mat &drawImg) {
+auto drawTime(cv::Mat &drawImg, float font_scale = 0.5, int text_x = 10, int text_y = 20) {
   // add current time
   // https://github.com/HowardHinnant/date/issues/543
   auto now = std::chrono::system_clock::now();
-  auto formatted = date::format("%Y-%m-%d %H:%M:%S", date::floor<std::chrono::seconds>(now));
-  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 2,
+  auto formatted = date::format("%Y/%m/%d %H:%M:%S", date::floor<std::chrono::seconds>(now));
+  cv::putText(drawImg, formatted, cv::Point(text_x, text_y), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0),
+              2,
               cv::LINE_AA);
-  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1,
+  cv::putText(drawImg, formatted, cv::Point(text_x, text_y), cv::FONT_HERSHEY_SIMPLEX, font_scale,
+              cv::Scalar(255, 255, 255), 1,
               cv::LINE_AA);
 }
 
@@ -175,6 +178,30 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis:
   this->cropRect = cv::Rect(crop_left_pt, 0, length, length);
 }
 
+void VideoHandler::saveToRedis(cv::Mat image, std::string key) {
+  // uchar = unsigned char
+  std::vector<uchar> buf;
+  auto success = cv::imencode(".png", image, buf);
+
+  // spdlog::debug("Send Vector Length: {}", buf.size());
+  if (success) {
+    auto len = redis.llen(opts.cacheKey);
+    // 1500 is the max length of the queue
+    // TODO I shouldn't use magic number
+    if (len < 1500) {
+      // spdlog::debug("Redis List length: {}", len);
+      // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
+      redis.lpush(key, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+    } else {
+      redis.rpop(key);
+      redis.lpush(key, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+    }
+  } else {
+    spdlog::error("Failed to encode image");
+    throw std::runtime_error("Failed to encode image");
+  }
+}
+
 int VideoHandler::run() {
   int real_frame_count = 0;
   while (YoloApp::IS_CAPTURE_ENABLED) {
@@ -204,31 +231,10 @@ int VideoHandler::run() {
     }
     drawTime(cvImgResized);
 
-
-    if (this->isWriteRedis) {
-      // uchar = unsigned char
-      std::vector<uchar> buf;
-      auto success = cv::imencode(".png", cvImgResized, buf);
-
-      // spdlog::debug("Send Vector Length: {}", buf.size());
-      if (success) {
-        auto len = redis.llen(opts.cacheKey);
-        // 1500 is the max length of the queue
-        // TODO I shouldn't use magic number
-        if (len < 1500) {
-          // spdlog::debug("Redis List length: {}", len);
-          // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
-          redis.lpush(opts.cacheKey, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
-        } else {
-          redis.rpop(opts.cacheKey);
-          redis.lpush(opts.cacheKey, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
-        }
-      } else {
-        spdlog::error("Failed to encode image");
-        throw std::runtime_error("Failed to encode image");
-      }
+    if (opts.isSaveAlt) {
+      this->saveToRedis(origImg, opts.altCacheKey);
     }
-
+    this->saveToRedis(cvImgResized, opts.cacheKey);
     auto end = ncnn::get_current_time();
 
     // Debug info
