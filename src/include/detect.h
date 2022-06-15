@@ -7,33 +7,14 @@
 
 #include "yolo-fastestv2.h"
 #include <benchmark.h>
+#include <Config.h>
 #include <sw/redis++/redis++.h>
 #include <pybind11/pybind11.h>
+#include <cmath>
 #include "spdlog/spdlog.h"
 #include "date.h"
-#include <cmath>
-#include <vector>
 
 namespace YoloApp {
-  enum Error {
-    SUCCESS = 0,
-    FAILURE = 1
-  };
-
-  extern bool IS_CAPTURE_ENABLED;
-  extern const std::vector<char const *> classNames;
-
-  // This shit should be global variable/singleton. Maybe.
-  struct Options {
-    float scaledCoeffs = 1.0;
-    int targetInputWidth = -1; // target means MAYBE the value will be set
-    int targetInputHeight = -1; // maybe not
-    float targetInputFPS = -1;
-    float outputFPS = 5; // Should be set if input is Web Camera, but not if input is video file (set the value to a negative number)
-    bool isBorder = true; // if true, display elevator door detect border
-    bool isDebug = false;
-  };
-
   struct CapProps {
     const double frame_width;
     const double frame_height;
@@ -76,13 +57,13 @@ namespace YoloApp {
     void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
 
     sw::redis::Redis &redis;
-    const std::vector<const char *> classNames;
-    YoloApp::Options opts;
+    std::vector<const char *> classNames;
+    YoloApp::Options &opts;
     bool isWriteRedis = true;
     bool isYolo = true;
 
     VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
-                 const std::vector<const char *> classNames, const YoloApp::Options opts);
+                 const std::vector<const char *> classNames, Options &opts);
     int run();
   };
 

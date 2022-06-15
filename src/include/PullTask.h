@@ -12,14 +12,14 @@ namespace YoloApp {
     sw::redis::Redis &redis;
   public:
     CapProps capProps;
-    Options opts;
+    Options &opts;
     bool isReadRedis = false;
     int  maxPoll = 1500;
     int  poll = 0;
     std::string pipeline;
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
-    PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis);
+    PullTask(CapProps capProps, Options &opts, sw::redis::Redis &redis);
     void setVideoWriter(std::string pipe);
 
     void clearQueue();

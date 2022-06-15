@@ -7,7 +7,6 @@
 
 #include <functional>
 #include <sw/redis++/redis++.h>
-#include <string>
 #include "utils.h"
 #include "detect.h"
 
@@ -22,7 +21,7 @@ namespace YoloApp {
 
   public:
     std::shared_ptr<YoloApp::VideoHandler>
-    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options opts);
+    initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options &opts);
 
     inline VideoInterface(std::string filePath) : filePath(filePath) {
       spdlog::debug("Input File Path: {}", filePath);

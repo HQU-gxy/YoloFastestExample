@@ -126,7 +126,7 @@ YoloApp::CapProps VideoHandler::getCapProps() {
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
 VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
-                           const std::vector<const char *> classNames, const YoloApp::Options opts)
+                           const std::vector<const char *> classNames, Options &opts)
     : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {
 
   frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);

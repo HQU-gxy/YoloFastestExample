@@ -30,9 +30,9 @@ void m::MainWrapper::init() {
   }
 
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
-  this->handler = this->recognize->initializeVideoHandler(api, pushRedis, videoOpts);
+  this->handler = this->recognize->initializeVideoHandler(api, pushRedis, opts);
   this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
-  this->pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, videoOpts, this->pullRedis);
+  this->pullJob = std::make_unique<YoloApp::PullTask>(*capsProps, opts, this->pullRedis);
 }
 
 y::Error m::MainWrapper::setPullWriter(std::string pipeline) {
@@ -77,35 +77,11 @@ std::thread m::MainWrapper::pullRun() {
   return pullTask;
 }
 
-#ifndef _STANDALONE_ON
-
-m::Options m::OptionsFromPyDict(const py::dict &dict) {
-  auto opts = YoloApp::Main::Options{
-      .inputFilePath = dict["input_file_path"].cast<std::string>(),
-      .paramPath = dict["param_path"].cast<std::string>(),
-      .binPath = dict["bin_path"].cast<std::string>(),
-      .redisUrl = dict["redis_url"].cast<std::string>(),
-      .scaledCoeffs = dict["scaled_coeffs"].cast<float>(),
-      .thresholdNMS = dict["threshold_NMS"].cast<float>(),
-      .targetInputWidth = dict["target_input_width"].cast<int>(),
-      .targetInputHeight = dict["target_input_height"].cast<int>(),
-      .targetInputFPS = dict["target_input_fps"].cast<float>(),
-      .outputFPS = dict["out_fps"].cast<float>(),
-      .threadsNum = dict["threads_num"].cast<int>(),
-      .isBorder = dict["is_border"].cast<bool>(),
-      .isDebug = dict["is_debug"].cast<bool>(),
-  };
-  return opts;
-}
-
-#endif
-
-m::MainWrapper::MainWrapper(const m::Options &opts)
+m::MainWrapper::MainWrapper()
     : api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
-      opts(opts),
+      opts(*y::Options::get()),
       pullRedis(opts.redisUrl),
-      pushRedis(opts.redisUrl),
-      videoOpts(m::toVideoOptions(opts)) {
+      pushRedis(opts.redisUrl) {
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
 }
 
@@ -216,18 +192,6 @@ void YoloApp::Main::MainWrapper::setYoloState(bool isYolo) {
   this->handler->isYolo = isYolo;
 }
 
-y::Options m::toVideoOptions(const m::Options &opts) {
-  YoloApp::Options vopts{
-      .scaledCoeffs = opts.scaledCoeffs,
-      .targetInputWidth = opts.targetInputWidth,
-      .targetInputHeight = opts.targetInputHeight,
-      .targetInputFPS = opts.targetInputFPS,
-      .outputFPS = opts.outputFPS,
-      .isBorder = opts.isBorder,
-      .isDebug = opts.isDebug,
-  };
-  return vopts;
-}
 
 
 

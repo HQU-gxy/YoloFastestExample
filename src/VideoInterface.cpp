@@ -3,7 +3,6 @@
 //
 
 #include "include/VideoInterface.h"
-#include <memory>
 
 namespace YoloApp {
 
@@ -21,7 +20,7 @@ namespace YoloApp {
   }
 
   std::shared_ptr<YoloApp::VideoHandler>
-  VideoInterface::initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options opts) {
+  VideoInterface::initializeVideoHandler(YoloFastestV2 &api, sw::redis::Redis &redis, Options &opts) {
     if (!cap.isOpened()) {
       spdlog::error("Cannot open video file");
       throw std::runtime_error("Cannot open video file");

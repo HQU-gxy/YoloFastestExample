@@ -58,8 +58,8 @@ void PullTask::clearQueue() {
   this->redis.del("image"); // TODO: why the key of redis is hardcoded
 };
 
-PullTask::PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
-                                                                               redis(redis) {}
+PullTask::PullTask(CapProps capProps, Options &opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
+                                                                                redis(redis) {}
 
 void PullTask::setVideoWriter(std::string pipe) {
   this->pipeline = std::move(pipe);
