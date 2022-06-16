@@ -36,15 +36,22 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("get_handler", &m::MainWrapper::getHandler)
       .def("get_pull_job", &m::MainWrapper::getPullJob);
 
-  py::class_<y::PullTask>(m, "PullTask")
+  /**
+   default pybind11 using unique_ptr
+   so the ownership has been transferred to python side
+   MainWrapper can't access it anymore
+   See https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
+  **/
+  py::class_<y::PullTask, std::shared_ptr<y::PullTask>>(m, "PullTask")
       .def("set_on_poll_complete", &y::PullTask::setOnPollComplete)
       .def("clear_queue", &y::PullTask::clearQueue)
       .def("start_poll", &y::PullTask::startPoll)
       .def("reset_poll", &y::PullTask::resetPoll)
+      .def("is_running", &y::PullTask::isRunning)
       .def_readwrite("max_poll", &y::PullTask::maxPoll)
       .def_readonly("poll", &y::PullTask::poll);
 
-  py::class_<y::VideoHandler>(m, "VideoHandler")
+  py::class_<y::VideoHandler, std::shared_ptr<y::VideoHandler>>(m, "VideoHandler")
       .def("set_on_detect_yolo", &y::VideoHandler::setOnDetectYolo)
       .def("set_on_detect_door", &y::VideoHandler::setOnDetectDoor)
       .def("set_crop_rect", &y::VideoHandler::setCropRect)

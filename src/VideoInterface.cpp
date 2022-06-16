@@ -26,8 +26,12 @@ namespace YoloApp {
       throw std::runtime_error("Cannot open video file");
     }
     if (videoHandler == nullptr) {
-      videoHandler = std::make_shared<VideoHandler>(cap, api, redis, YoloApp::classNames, opts);
+      auto ptr = std::make_shared<VideoHandler>(cap, api, redis, YoloApp::classNames, opts);
+      spdlog::debug("Trying to initialize video handler at {:p}", fmt::ptr(ptr));
+      videoHandler = ptr;
+      return ptr;
+    } else {
+      return videoHandler;
     }
-    return videoHandler;
   }
 }

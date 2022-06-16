@@ -23,10 +23,10 @@ namespace YoloApp::Main {
     Options &opts;
     r::Redis pullRedis;
     r::Redis pushRedis;
-    std::unique_ptr<VideoInterface> recognize;
-    std::shared_ptr<VideoHandler> handler;
-    std::shared_ptr<YoloApp::PullTask> pullJob;
-    std::unique_ptr<CapProps> capsProps;
+    std::unique_ptr<VideoInterface> recognize = nullptr;
+    std::shared_ptr<VideoHandler> handler = nullptr;
+    std::shared_ptr<YoloApp::PullTask> pullJob = nullptr;
+    std::unique_ptr<CapProps> capsProps = nullptr;
 
   public:
     explicit MainWrapper(YoloApp::Options &opts);

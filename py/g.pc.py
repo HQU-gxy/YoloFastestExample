@@ -111,12 +111,24 @@ class UDPApp:
         self.app = yolo_app
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.connect(address)
+        # yolo_app initialization
+        self.app.init()
+        # default pybind11 using unique_ptr
+        # so the ownership has been transferred to python side
+        # MainWrapper can't access it anymore
+        # See 
+        # https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
+        self.video_handler = self.app.get_handler()
+        self.pull_job = self.app.get_pull_job()
+        # self.pull_job.set_on_poll_complete(self.on_poll_complete)
+        # self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
+        # self.video_handler.set_on_detect_door(self.on_detect_door)
 
     # should call this instead of self.app.reset_poll
     # when reset poll
     def reset_poll(self):
-        self.app.reset_poll()
-        self.app.set_max_poll(emerg_max_poll)
+        self.pull_job.reset_poll()
+        self.pull_job.max_poll = emerg_max_poll
         self.status = Code.OK.value
 
     def on_detect_yolo(self, xs):
@@ -180,12 +192,12 @@ class UDPApp:
             if (self.hash and self.hash == hash):
                 chn_s = chan.to_bytes(2, 'big').hex()
                 logger.info("Receive RTMP Channel {}".format(chn_s))
-                if (self.app.get_pull_task_state() == False):
+                if (self.pull_job.is_running() == False):
                     self.reset_poll()
                     # self.app.clear_queue()
 
-                    self.app.set_max_poll(stream_max_poll)
-                    self.app.start_poll(gen_pipeline(chn_s))
+                    self.pull_job.max_poll = stream_max_poll
+                    self.pull_job.start_poll(gen_pipeline(chn_s))
 
                     logger.info("Start RTMP to {}".format(chn_s))
                     resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
@@ -242,9 +254,9 @@ class UDPApp:
 
 
 def run_main():
-    main.run_push()
-    main.run_pull()
-    main.set_max_poll(emerg_max_poll)
+    gevent.sleep(1)
+    u.app.run_push()
+    u.app.run_pull()
     # sleep(10)
     # main.reset_poll()
     # main.start_poll(gen_pipeline(u.e_chan))
@@ -291,11 +303,7 @@ if __name__ == "__main__":
 
     main = yolo_app.MainWrapper(opts)
     logger.info("host: {}, port: {}".format(host, port))
-    main.init()
     u = UDPApp(host, port, main, 123)
-    main.set_on_detect_yolo(u.on_detect_yolo)
-    main.set_on_detect_door(u.on_detect_door)
-    main.set_on_poll_complete(u.on_poll_complete)
     # https://sdiehl.github.io/gevent-tutorial/
     g = gevent.spawn(u.serve_forever)
     send_init = gevent.spawn(u.send_init_req)

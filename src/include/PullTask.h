@@ -14,6 +14,8 @@ namespace YoloApp {
     CapProps capProps;
     Options &opts;
     bool isReadRedis = false;
+
+    bool isRunning() const;
     int  maxPoll = 1500;
     int  poll = 0;
     std::string pipeline;

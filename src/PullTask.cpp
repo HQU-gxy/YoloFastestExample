@@ -87,3 +87,7 @@ void PullTask::resetPoll() {
   this->poll = 0;
   this->isReadRedis = false;
 }
+
+bool PullTask::isRunning() const {
+  return isReadRedis;
+}

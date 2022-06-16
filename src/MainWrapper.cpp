@@ -33,13 +33,14 @@ void m::MainWrapper::init() {
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, opts);
   this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
   this->pullJob = std::make_shared<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
+  spdlog::debug("Pointers: handler at {}, PullJob at {}", fmt::ptr(this->handler), fmt::ptr(this->pullJob));
 }
 
 std::thread m::MainWrapper::pushRun() {
-  if (this->recognize == nullptr) {
-    throw std::runtime_error("recognize is uninitialized");
+  if (this->handler == nullptr) {
+    throw std::runtime_error("handler is uninitialized");
   }
-  std::thread pushTask([&]() {
+  std::thread pushTask([=]() {
     this->handler->run();
   });
   return pushTask;
@@ -57,7 +58,7 @@ std::thread m::MainWrapper::pullRun() {
   if (this->pullJob == nullptr) {
     throw std::runtime_error("recognize is uninitialized");
   }
-  std::thread pullTask([&]() {
+  std::thread pullTask([=]() {
     pullJob->run();
   });
   return pullTask;
@@ -72,11 +73,19 @@ m::MainWrapper::MainWrapper(y::Options &opts)
 }
 
 const std::shared_ptr<y::VideoHandler> &YoloApp::Main::MainWrapper::getHandler() const {
-  return handler;
+  if (handler == nullptr){
+    throw std::runtime_error("handler not initialized");
+  } else {
+    return handler;
+  }
 }
 
 const std::shared_ptr<YoloApp::PullTask> & YoloApp::Main::MainWrapper::getPullJob() const {
-  return pullJob;
+  if (pullJob == nullptr) {
+    throw std::runtime_error("pull job not initialized");
+  } else {
+    return pullJob;
+  }
 }
 
 
