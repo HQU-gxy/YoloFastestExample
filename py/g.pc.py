@@ -119,7 +119,7 @@ class UDPApp:
         # See 
         # https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
         self.video_handler = self.app.get_handler()
-        self.pull_job = self.app.get_pull_job()
+        self.pull_job = self.app.get_alt_pull_job()
         # self.pull_job.set_on_poll_complete(self.on_poll_complete)
         # self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
         # self.video_handler.set_on_detect_door(self.on_detect_door)
@@ -255,8 +255,10 @@ class UDPApp:
 
 def run_main():
     gevent.sleep(1)
+    # start threads
     u.app.run_push()
     u.app.run_pull()
+    u.app.run_alt_pull()
     # sleep(10)
     # main.reset_poll()
     # main.start_poll(gen_pipeline(u.e_chan))

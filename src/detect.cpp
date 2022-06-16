@@ -158,8 +158,9 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis:
     spdlog::debug("Try to set video FPS to {}, result {}", opts.targetInputFPS, frame_fps);
   }
 
+  // drop all the cache before starting
   redis.del(opts.cacheKey);
-
+  redis.del(opts.altCacheKey);
 
   if (opts.scaledCoeffs < 0 || opts.scaledCoeffs > 1) {
     spdlog::warn("scaledCoeffs should be between 0 and 1. Image will not be resized");

@@ -33,8 +33,10 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
+      .def("run_alt_pull", &m::MainWrapper::altPullRunDetach)
       .def("get_handler", &m::MainWrapper::getHandler)
-      .def("get_pull_job", &m::MainWrapper::getPullJob);
+      .def("get_pull_job", &m::MainWrapper::getPullJob)
+      .def("get_alt_pull_job", &m::MainWrapper::getAltPullJob);
 
   /**
    default pybind11 using unique_ptr

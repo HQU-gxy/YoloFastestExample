@@ -31,8 +31,11 @@ void m::MainWrapper::init() {
 
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, opts);
-  this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
+  this->capsProps = std::make_shared<CapProps>(handler->getCapProps());
   this->pullJob = std::make_shared<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
+  if (opts.isSaveAlt) {
+    this->altPullJob = std::make_shared<YoloApp::PullTask>(opts.altCacheKey, this->altRedis, *capsProps, opts);
+  }
   spdlog::debug("Pointers: handler at {}, PullJob at {}", fmt::ptr(this->handler), fmt::ptr(this->pullJob));
 }
 
@@ -46,6 +49,27 @@ std::thread m::MainWrapper::pushRun() {
   return pushTask;
 }
 
+std::thread m::MainWrapper::pullRun() {
+  if (this->pullJob == nullptr) {
+    throw std::runtime_error("pullJob is uninitialized");
+  }
+  std::thread pullTask([=]() {
+    pullJob->run();
+  });
+  return pullTask;
+}
+
+std::thread YoloApp::Main::MainWrapper::altPullRun() {
+  if (this->altPullJob == nullptr) {
+    throw std::runtime_error("altPullJob is uninitialized");
+  }
+  std::thread pullTask([=]() {
+    altPullJob->run();
+  });
+  return pullTask;
+}
+
+// TODO: refactor this to eliminate duplicated code
 void m::MainWrapper::pushRunDetach() {
   this->pushRun().detach();
 }
@@ -54,21 +78,16 @@ void m::MainWrapper::pullRunDetach() {
   this->pullRun().detach();
 }
 
-std::thread m::MainWrapper::pullRun() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("recognize is uninitialized");
-  }
-  std::thread pullTask([=]() {
-    pullJob->run();
-  });
-  return pullTask;
+void YoloApp::Main::MainWrapper::altPullRunDetach() {
+  this->altPullRun().detach();
 }
 
 m::MainWrapper::MainWrapper(y::Options &opts)
     : api(YoloFastestV2(opts.threadsNum, opts.thresholdNMS)),
       opts(opts),
       pullRedis(opts.redisUrl),
-      pushRedis(opts.redisUrl) {
+      pushRedis(opts.redisUrl),
+      altRedis(opts.redisUrl){
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
 }
 
@@ -87,6 +106,15 @@ const std::shared_ptr<YoloApp::PullTask> & YoloApp::Main::MainWrapper::getPullJo
     return pullJob;
   }
 }
+
+const std::shared_ptr<YoloApp::PullTask> &YoloApp::Main::MainWrapper::getAltPullJob() const {
+  if (altPullJob == nullptr) {
+    throw std::runtime_error("pull job not initialized");
+  } else {
+    return altPullJob;
+  }
+}
+
 
 
 
