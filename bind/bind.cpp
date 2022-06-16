@@ -22,7 +22,10 @@ PYBIND11_MODULE(yolo_app, m) {
           .. autosummary::
              :toctree: _generate
       )pbdoc";
-  py::class_<y::Options>(m, "Options")
+  // The singleton of Options is implemented by shared_ptr
+  // If this declaration is not added,
+  // INSTANCE will magically be nullptr if called by python (ownership moved)
+  py::class_<y::Options, std::shared_ptr<y::Options>>(m, "Options")
       .def_readwrite("scaled_coeffs", &y::Options::scaledCoeffs)
       .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
       .def_readwrite("is_border", &y::Options::isBorder)

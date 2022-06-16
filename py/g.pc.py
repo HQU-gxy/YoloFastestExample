@@ -119,10 +119,10 @@ class UDPApp:
         # See 
         # https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
         self.video_handler = self.app.get_handler()
-        self.pull_job = self.app.get_pull_job()
-        # self.pull_job.set_on_poll_complete(self.on_poll_complete)
-        # self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
-        # self.video_handler.set_on_detect_door(self.on_detect_door)
+        self.pull_job = self.app.get_alt_pull_job()
+        self.pull_job.set_on_poll_complete(self.on_poll_complete)
+        self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
+        self.video_handler.set_on_detect_door(self.on_detect_door)
 
     # should call this instead of self.app.reset_poll
     # when reset poll
@@ -138,7 +138,7 @@ class UDPApp:
                 # byte_list = bytes.fromhex("70") + \
                 #     bytes(flatmap(lambda x: x.to_bytes(
                 #         2, 'big', signed=True), pts))
-                logger.trace("({},{}) ({},{}) category: {} score: {}"
+                logger.debug("({},{}) ({},{}) category: {} score: {}"
                              .format(x.x1, x.y1, x.x2, x.y2, x.cate, x. score))
                 # self.sock.send(byte_list)
                 # print("[yolo] send {}".format(byte_list.hex()))
