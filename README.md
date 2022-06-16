@@ -41,7 +41,7 @@ cd ../../
 mkdir build
 cd build
 # you need to specify the path to Python and OpenCV if needed
-# cmake .. -DPython3_INCLUDE_DIRS=/usr/include/python3.6 -DPython3_LIBRARY=/usr/lib/libpython3.6.so -DOpenCV_DIR=/opt/rk3328_cross_compile_opencv
+# cmake .. -DOpenCV_DIR=/opt/rk3328_cross_compile_opencv
 cmake ..
 cmake --build . --target yolo_app -- -j $(nproc)
 # default install to ${PROJECT_SOURCE_DIR}/py
@@ -63,7 +63,44 @@ You need a swapfile to compile it if your memory is not enough. At least 3 GB of
 
 ```bash
 sudo free -h
+# or
+sudo swapon --show
 ```
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+then edit `/etc/fstab`
+
+```text
+/swapfile swap swap defaults 0 0
+```
+
+Maybe you need to remove the swap file later for small disk space device.
+
+```bash
+sudo swapoff -v /swapfile
+```
+
+### redis
+
+```bash
+apt install redis
+```
+
+[Disable Redis Persistent Store to prevent run out of disk](https://stackoverflow.com/questions/28785383/how-to-disable-persistence-with-redis)
+
+Modify `/etc/redis/redis.conf` then restart the redis `systemctl restart redis`
+
+### proxychains
+
+Clash or other proxy software should be accessible via LAN or running locally.
+
+`/etc/proxychains.conf`
 
 ### Install GCC10
 
@@ -74,6 +111,38 @@ sudo free -h
 
 - [deadsnakes软件源介绍以及在Ubuntu上安装最近版本Python的方法](https://zhuanlan.zhihu.com/p/45329974)
 - [deadsnakes PPA](https://tooling.bennuttall.com/deadsnakes/)
+
+```bash
+apt install python3.10-dev python3.10-venv
+```
+
+using `pip` [Pip is not working for Python 3.10 on Ubuntu](https://stackoverflow.com/questions/69503329/pip-is-not-working-for-python-3-10-on-ubuntu)
+
+Proxy is usually necessary.
+
+```bash
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+```
+
+### update-alternatives
+
+[update-alternatives](https://man7.org/linux/man-pages/man1/update-alternatives.1.html)
+
+```bash
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 3
+```
+
+### Install Latest CMake (3.24.0-rc1)
+
+Download binary from [cmake](https://cmake.org/download/).
+
+Copy to `/usr/` (or `/usr/local/`?)
+
+### i2cdetect
+
+```bash
+apt-get install i2c-tools
+```
 
 ## IDE
 
