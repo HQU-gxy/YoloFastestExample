@@ -14,7 +14,7 @@ namespace y = YoloApp;
 
 PYBIND11_MODULE(yolo_app, m) {
   m.doc() = R"pbdoc(
-          Pybind11 example plugin
+          YoloApp Python Binding
           -----------------------
 
           .. currentmodule:: yolo_app
@@ -27,28 +27,12 @@ PYBIND11_MODULE(yolo_app, m) {
       .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
       .def_readwrite("is_border", &y::Options::isBorder)
       .def_static("init", &y::Options::fromPyDict);
+
   py::class_<m::MainWrapper>(m, "MainWrapper")
       .def(py::init<y::Options &>())
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
-      // from here
-      .def("_set_pull_writer", &m::MainWrapper::setPullWriter)
-      .def("_set_pull_task_state", &m::MainWrapper::setPullTaskState)
-      .def("get_pull_task_state", &m::MainWrapper::getPullTaskState)
-      .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
-      .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
-      .def("set_on_poll_complete", &m::MainWrapper::setOnPollComplete)
-      .def("set_yolo_state", &m::MainWrapper::setYoloState)
-      .def("set_crop_rect", &m::MainWrapper::setCropRect)
-      .def("get_poll", &m::MainWrapper::getPoll)
-      .def("get_max_poll", &m::MainWrapper::getMaxPoll)
-      .def("set_max_poll", &m::MainWrapper::setMaxPoll)
-      .def("reset_poll", &m::MainWrapper::resetPoll)
-      .def("_enable_poll", &m::MainWrapper::enablePoll)
-      .def("start_poll", &m::MainWrapper::startPoll)
-      .def("clear_queue", &m::MainWrapper::clearQueue)
-      // to here
       .def("get_handler", &m::MainWrapper::getHandler)
       .def("get_pull_job", &m::MainWrapper::getPullJob);
 

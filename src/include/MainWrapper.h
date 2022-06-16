@@ -37,33 +37,8 @@ namespace YoloApp::Main {
     std::thread pullRun();
     std::thread pushRun();
 
-    Error setPullWriter(std::string pipeline);
-
     void pushRunDetach();
     void pullRunDetach();
-
-    void setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor);
-    void setOnDetectYolo(const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo);
-    void setOnPollComplete(const std::function<void(int)> &onPollComplete);
-
-    void setPullTaskState(bool isRunning);
-
-    bool setMaxPoll(int max);
-
-    bool getPullTaskState();
-
-    void clearQueue();
-
-    int getPoll();
-    int getMaxPoll();
-
-    void resetPoll();
-
-    void enablePoll();
-    void startPoll(std::string pipeline);
-
-    int setCropRect(int x, int y, int w, int h);
-    void setYoloState(bool isYolo);
   };
 
 }

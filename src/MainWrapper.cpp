@@ -35,20 +35,6 @@ void m::MainWrapper::init() {
   this->pullJob = std::make_shared<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
 }
 
-y::Error m::MainWrapper::setPullWriter(std::string pipeline) {
-  try {
-    spdlog::info("Swap writer to pipeline {}", pipeline);
-    if (this->pullJob == nullptr || this->capsProps == nullptr) {
-      throw std::runtime_error("pull thread or capsProps is uninitialized");
-    }
-    this->pullJob->setVideoWriter(pipeline);
-    return y::SUCCESS;
-  } catch (std::exception &e) {
-    spdlog::error(e.what());
-    return y::Error::FAILURE;
-  }
-}
-
 std::thread m::MainWrapper::pushRun() {
   if (this->recognize == nullptr) {
     throw std::runtime_error("recognize is uninitialized");
@@ -83,113 +69,6 @@ m::MainWrapper::MainWrapper(y::Options &opts)
       pullRedis(opts.redisUrl),
       pushRedis(opts.redisUrl) {
   api.loadModel(opts.paramPath.c_str(), opts.binPath.c_str());
-}
-
-void
-YoloApp::Main::MainWrapper::setOnDetectDoor
-    (const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {
-  if (this->handler == nullptr) {
-    throw std::runtime_error("handler is uninitialized");
-  }
-  this->handler->setOnDetectDoor(onDetectDoor);
-}
-
-void
-YoloApp::Main::MainWrapper::setOnDetectYolo
-    (const std::function<void(const std::vector<TargetBox> &)> &onDetectYolo) {
-  if (this->handler == nullptr) {
-    throw std::runtime_error("handler is uninitialized");
-  }
-  this->handler->setOnDetectYolo(onDetectYolo);
-}
-
-void YoloApp::Main::MainWrapper::setPullTaskState(bool isRunning) {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  this->pullJob->isReadRedis = isRunning;
-}
-
-bool YoloApp::Main::MainWrapper::getPullTaskState() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  return this->pullJob->isReadRedis;
-}
-
-bool m::MainWrapper::setMaxPoll(int max) {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  if (max < 0) {
-    return false;
-  }
-  this->pullJob->maxPoll = max;
-  return true;
-}
-
-// set the pull job writer to pipeline and stop the pull job
-void m::MainWrapper::resetPoll() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  this->setPullWriter("");
-  this->pullJob->poll = 0;
-  this->pullJob->isReadRedis = false;
-}
-
-int m::MainWrapper::getMaxPoll() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  return this->pullJob->maxPoll;
-}
-
-int m::MainWrapper::getPoll() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  return this->pullJob->poll;
-}
-
-void m::MainWrapper::enablePoll() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  this->pullJob->isReadRedis = true;
-}
-
-void m::MainWrapper::setOnPollComplete(const std::function<void(int)> &onPollComplete) {
-  this->pullJob->onPollComplete = onPollComplete;
-}
-
-void YoloApp::Main::MainWrapper::startPoll(std::string pipeline) {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  this->setPullWriter(pipeline);
-  this->enablePoll();
-}
-
-void YoloApp::Main::MainWrapper::clearQueue() {
-  if (this->pullJob == nullptr) {
-    throw std::runtime_error("pullJob is uninitialized");
-  }
-  this->pullJob->clearQueue();
-}
-
-int YoloApp::Main::MainWrapper::setCropRect(int x, int y, int w, int h) {
-  if (this->handler == nullptr) {
-    throw std::runtime_error("Handler is uninitialized");
-  }
-  return this->handler->setCropRect(x, y, w, h);
-}
-
-void YoloApp::Main::MainWrapper::setYoloState(bool isYolo) {
-  if (this->handler == nullptr) {
-    throw std::runtime_error("Handler is uninitialized");
-  }
-  this->handler->isYolo = isYolo;
 }
 
 const std::shared_ptr<y::VideoHandler> &YoloApp::Main::MainWrapper::getHandler() const {
