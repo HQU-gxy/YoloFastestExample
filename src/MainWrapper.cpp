@@ -32,7 +32,7 @@ void m::MainWrapper::init() {
   this->recognize = YoloApp::createFile(opts.inputFilePath).value();
   this->handler = this->recognize->initializeVideoHandler(api, pushRedis, opts);
   this->capsProps = std::make_unique<CapProps>(handler->getCapProps());
-  this->pullJob = std::make_unique<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
+  this->pullJob = std::make_shared<YoloApp::PullTask>(opts.cacheKey, this->pullRedis, *capsProps, opts);
 }
 
 y::Error m::MainWrapper::setPullWriter(std::string pipeline) {
@@ -190,6 +190,14 @@ void YoloApp::Main::MainWrapper::setYoloState(bool isYolo) {
     throw std::runtime_error("Handler is uninitialized");
   }
   this->handler->isYolo = isYolo;
+}
+
+const std::shared_ptr<y::VideoHandler> &YoloApp::Main::MainWrapper::getHandler() const {
+  return handler;
+}
+
+const std::shared_ptr<YoloApp::PullTask> & YoloApp::Main::MainWrapper::getPullJob() const {
+  return pullJob;
 }
 
 

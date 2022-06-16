@@ -23,10 +23,6 @@ PYBIND11_MODULE(yolo_app, m) {
              :toctree: _generate
       )pbdoc";
   py::class_<y::Options>(m, "Options")
-      .def_readwrite("input_file_path", &y::Options::inputFilePath)
-      .def_readwrite("param_path", &y::Options::paramPath)
-      .def_readwrite("bin_path", &y::Options::binPath)
-      .def_readwrite("redis_url", &y::Options::redisUrl)
       .def_readwrite("scaled_coeffs", &y::Options::scaledCoeffs)
       .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
       .def_readwrite("is_border", &y::Options::isBorder)
@@ -36,6 +32,7 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
+      // from here
       .def("_set_pull_writer", &m::MainWrapper::setPullWriter)
       .def("_set_pull_task_state", &m::MainWrapper::setPullTaskState)
       .def("get_pull_task_state", &m::MainWrapper::getPullTaskState)
@@ -50,7 +47,24 @@ PYBIND11_MODULE(yolo_app, m) {
       .def("reset_poll", &m::MainWrapper::resetPoll)
       .def("_enable_poll", &m::MainWrapper::enablePoll)
       .def("start_poll", &m::MainWrapper::startPoll)
-      .def("clear_queue", &m::MainWrapper::clearQueue);
+      .def("clear_queue", &m::MainWrapper::clearQueue)
+      // to here
+      .def("get_handler", &m::MainWrapper::getHandler)
+      .def("get_pull_job", &m::MainWrapper::getPullJob);
+
+  py::class_<y::PullTask>(m, "PullTask")
+      .def("set_on_poll_complete", &y::PullTask::setOnPollComplete)
+      .def("clear_queue", &y::PullTask::clearQueue)
+      .def("start_poll", &y::PullTask::startPoll)
+      .def("reset_poll", &y::PullTask::resetPoll)
+      .def_readwrite("max_poll", &y::PullTask::maxPoll)
+      .def_readonly("poll", &y::PullTask::poll);
+
+  py::class_<y::VideoHandler>(m, "VideoHandler")
+      .def("set_on_detect_yolo", &y::VideoHandler::setOnDetectYolo)
+      .def("set_on_detect_door", &y::VideoHandler::setOnDetectDoor)
+      .def("set_crop_rect", &y::VideoHandler::setCropRect)
+      .def_readwrite("is_yolo", &y::VideoHandler::isYolo);
 
   py::class_<TargetBox>(m, "TargetBox")
       .def_readwrite("x1", &TargetBox::x1)

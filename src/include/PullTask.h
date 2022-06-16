@@ -20,11 +20,14 @@ namespace YoloApp {
     std::string redisKey;
     std::function<void(const int &)> onPollComplete = [](const int &) {};
 
+
     PullTask(std::string key, sw::redis::Redis &redis, CapProps capProps, Options &opts);
+
     void setVideoWriter(std::string pipe);
-
+    void setOnPollComplete(const std::function<void(const int &)> &onPollComplete);
+    void startPoll(std::string pipeline);
+    void resetPoll();
     void clearQueue();
-
     void run();
   };
 }

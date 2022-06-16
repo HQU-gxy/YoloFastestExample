@@ -63,6 +63,7 @@ PullTask::PullTask(std::string key, sw::redis::Redis &redis, CapProps capProps, 
       redis(redis) {}
 
 void PullTask::setVideoWriter(std::string pipe) {
+  spdlog::info("Swap writer to pipeline {}", pipe);
   this->pipeline = std::move(pipe);
   if (this->writer != nullptr && this->writer->isOpened()) {
     this->writer->release();
@@ -70,4 +71,19 @@ void PullTask::setVideoWriter(std::string pipe) {
   this->writer = std::make_unique<cv::VideoWriter>();
   // make an empty writer without opening it
   // the opening operation will be finished in PullTask::run()
+}
+
+void PullTask::setOnPollComplete(const std::function<void(const int &)> &onPollComplete) {
+  PullTask::onPollComplete = onPollComplete;
+}
+
+void PullTask::startPoll(std::string pipeline) {
+  this->setVideoWriter(pipeline);
+  this->isReadRedis = true;
+}
+
+void PullTask::resetPoll() {
+  this->setVideoWriter("");
+  this->poll = 0;
+  this->isReadRedis = false;
 }
