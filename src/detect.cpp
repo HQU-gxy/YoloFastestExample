@@ -230,7 +230,9 @@ int VideoHandler::run() {
     if (this->isYolo) {
       detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
     }
-    drawTime(cvImgResized);
+    if (opts.isDrawTime) {
+      drawTime(cvImgResized, opts.timeFontScale, opts.timeTextX, opts.timeTextY);
+    }
 
     if (opts.isSaveAlt) {
       this->saveToRedis(origImg, opts.altCacheKey);

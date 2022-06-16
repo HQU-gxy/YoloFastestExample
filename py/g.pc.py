@@ -119,7 +119,7 @@ class UDPApp:
         # See 
         # https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
         self.video_handler = self.app.get_handler()
-        self.pull_job = self.app.get_alt_pull_job()
+        self.pull_job = self.app.get_pull_job()
         # self.pull_job.set_on_poll_complete(self.on_poll_complete)
         # self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
         # self.video_handler.set_on_detect_door(self.on_detect_door)
@@ -292,7 +292,12 @@ if __name__ == "__main__":
         "threshold_NMS": 0.125,
         "out_fps": 15,
         "threads_num": 4,
+        "time_text_x": 10,
+        "time_text_y": 20,
+        "time_font_scale": 0.4,
         "is_border": False,
+        "is_draw_time": True,
+        "is_save_alt": True,
         "is_debug": is_debug,
     }
 

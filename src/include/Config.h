@@ -8,8 +8,11 @@
 #include <vector>
 #include <memory>
 #include <string>
+
 #ifndef _STANDALONE_ON
+
 #include <pybind11/pybind11.h>
+
 namespace py = pybind11;
 #endif
 
@@ -41,27 +44,38 @@ namespace YoloApp {
     // but not if input is video file (set the value to a negative number)
     float outputFPS = 5;
     int threadsNum = 1;
+    int timeTextX = 10;
+    int timeTextY = 20;
+    float timeFontScale = 0.5;
     bool isBorder = true; // if true, display elevator door detect border
     bool isDebug = false;
+    bool isDrawTime = true;
     bool isSaveAlt = true;
   public:
-    static std::shared_ptr<Options> get(){
+    static std::shared_ptr<Options> get() {
       static auto INSTANCE = std::make_shared<Options>();
       return INSTANCE;
     }
+
     #ifndef _STANDALONE_ON
+
     static std::shared_ptr<Options> fromPyDict(const py::dict &dict);
+
     #endif
 
-    Options () = default;
+    Options() = default;
+
     // copy constructor should not be used
-    Options (Options const&) = delete;
+    Options(Options const &) = delete;
+
     // the same as move constructor
-    Options (Options const&&) = delete;
-    Options& operator=(Options const&) = delete;
-    Options& operator=(Options &&) = delete;
+    Options(Options const &&) = delete;
+
+    Options &operator=(Options const &) = delete;
+
+    Options &operator=(Options &&) = delete;
   };
-};
+}
 
 
 #endif //YOLO_APP_CONFIG_H

@@ -20,6 +20,7 @@ const std::vector<char const *> YoloApp::classNames = {
 
 using namespace YoloApp;
 #ifndef _STANDALONE_ON
+
 std::shared_ptr<Options> Options::fromPyDict(const py::dict &dict) {
   auto instance = Options::get();
   instance->inputFilePath = dict["input_file_path"].cast<std::string>();
@@ -31,12 +32,18 @@ std::shared_ptr<Options> Options::fromPyDict(const py::dict &dict) {
   instance->targetInputWidth = dict["target_input_width"].cast<int>();
   instance->targetInputHeight = dict["target_input_height"].cast<int>();
   instance->targetInputFPS = dict["target_input_fps"].cast<float>();
+  instance->timeTextX = dict["time_text_x"].cast<int>();
+  instance->timeTextY = dict["time_text_y"].cast<int>();
+  instance->timeFontScale = dict["time_font_scale"].cast<float>();
   instance->outputFPS = dict["out_fps"].cast<float>();
   instance->threadsNum = dict["threads_num"].cast<int>();
   instance->isBorder = dict["is_border"].cast<bool>();
   instance->isDebug = dict["is_debug"].cast<bool>();
+  instance->isDrawTime = dict["is_draw_time"].cast<bool>();
+  instance->isSaveAlt = dict["is_save_alt"].cast<bool>();
   instance->cacheKey = dict["cache_key"].cast<std::string>();
   instance->altCacheKey = dict["alt_cache_key"].cast<std::string>();
   return instance;
 }
+
 #endif

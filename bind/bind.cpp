@@ -26,6 +26,9 @@ PYBIND11_MODULE(yolo_app, m) {
       .def_readwrite("scaled_coeffs", &y::Options::scaledCoeffs)
       .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
       .def_readwrite("is_border", &y::Options::isBorder)
+      .def_readwrite("is_draw_time", &y::Options::isDrawTime)
+      .def_readwrite("time_text_x", &y::Options::timeTextX)
+      .def_readwrite("time_text_y", &y::Options::timeTextY)
       .def_static("init", &y::Options::fromPyDict);
 
   py::class_<m::MainWrapper>(m, "MainWrapper")
