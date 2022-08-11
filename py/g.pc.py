@@ -8,8 +8,6 @@ from e_helper import *
 from typing import List, TypeVar
 # import logging
 from loguru import logger
-from bmp180 import bmp180
-from mpu6050 import mpu6050
 import struct
 import argparse
 
@@ -63,7 +61,7 @@ base_pipeline = "appsrc ! " + \
                 "x264enc  pass=5 quantizer=25 speed-preset=6 ! " + \
                 "video/x-h264, profile=baseline ! " + \
                 "flvmux ! " + \
-                "rtmpsink location="
+                "rtmpsink sync=false location="
 
 
 # https://www.gevent.org/examples/udp_client.html
@@ -113,26 +111,50 @@ class UDPApp:
         self.app = yolo_app
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.connect(address)
+        # yolo_app initialization
+        self.app.init()
+        # default pybind11 using unique_ptr
+        # so the ownership has been transferred to python side
+        # MainWrapper can't access it anymore
+        # See 
+        # https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
+        self.video_handler = self.app.get_handler()
+        self.pull_job = self.app.get_alt_pull_job()
+        self.pull_job.set_on_poll_complete(self.on_poll_complete)
+        self.video_handler.set_on_detect_yolo(self.on_detect_yolo)
+        self.video_handler.set_on_detect_door(self.on_detect_door)
 
     # should call this instead of self.app.reset_poll
     # when reset poll
     def reset_poll(self):
-        self.app.reset_poll()
-        self.app.set_max_poll(emerg_max_poll)
+        self.pull_job.reset_poll()
+        self.pull_job.max_poll = emerg_max_poll
         self.status = Code.OK.value
 
     def on_detect_yolo(self, xs):
         if xs:
             for x in xs:
-                logger.trace("({},{}) ({},{}) category: {} score: {}"
+                # pts = [x.x1, x.y1, x.x2, x.y2]
+                # byte_list = bytes.fromhex("70") + \
+                #     bytes(flatmap(lambda x: x.to_bytes(
+                #         2, 'big', signed=True), pts))
+                logger.debug("({},{}) ({},{}) category: {} score: {}"
                              .format(x.x1, x.y1, x.x2, x.y2, x.cate, x. score))
+                # self.sock.send(byte_list)
+                # print("[yolo] send {}".format(byte_list.hex()))
 
     def on_detect_door(self, xs):
         if xs:
             for x in xs:
                 (x1, y1), (x2, y2) = x
+                # pts = [x1, y1, x2, y2]
+                # byte_list = bytes.fromhex("80") + \
+                #     bytes(flatmap(lambda x: x.to_bytes(
+                #         2, 'big', signed=True), pts))
                 logger.trace("({},{}) ({},{})"
                              .format(x1, y1, x2, y2))
+                # self.sock.send(byte_list)
+                # print("[door] send {}".format(byte_list.hex()))
 
     def on_poll_complete(self, poll):
         self.reset_poll()
@@ -170,12 +192,12 @@ class UDPApp:
             if (self.hash and self.hash == hash):
                 chn_s = chan.to_bytes(2, 'big').hex()
                 logger.info("Receive RTMP Channel {}".format(chn_s))
-                if (self.app.get_pull_task_state() == False):
+                if (self.pull_job.is_running() == False):
                     self.reset_poll()
                     # self.app.clear_queue()
 
-                    self.app.set_max_poll(stream_max_poll)
-                    self.app.start_poll(gen_pipeline(chn_s))
+                    self.pull_job.max_poll = stream_max_poll
+                    self.pull_job.start_poll(gen_pipeline(chn_s))
 
                     logger.info("Start RTMP to {}".format(chn_s))
                     resp = struct.pack(MsgStruct.RTMP_STREAM_CLIENT.value,
@@ -229,40 +251,14 @@ class UDPApp:
             data, address = self.sock.recvfrom(1024)
             logger.debug("{} from {}".format(data.hex(), address))
             self.handle_req(data)
-    def bmp_forever(self):
-        bmp = bmp180(0x77)
-        while(True):
-            pressure = bmp.get_pressure()
-            if self.hash != None:
-                req = struct.pack(MsgStruct.PRESSURE_CLIENT.value,
-                                MsgType.PRESSURE.value,
-                                self.hash,
-                                pressure)
-                self.sock.send(req)
-            logger.debug("Pressure: {} Pascal".format(pressure))
-            sleep(1)
-    def mpu6050_forever(self):
-        sensor = mpu6050(0x68)
-        while True:
-            accel_data = sensor.get_accel_data()
-            if accel_data != None:
-                x = accel_data['x']
-                y = accel_data['y']
-                z = accel_data['z']
-                if self.hash != None:
-                    req = struct.pack(MsgStruct.ACC_CLIENT.value,
-                                    MsgType.ACC.value,
-                                    self.hash,
-                                    x, y, z)
-                    self.sock.send(req)
-                logger.debug("x: {}, y: {}, z: {}".format(x, y, z))
-            sleep(1)
 
 
 def run_main():
-    main.run_push()
-    main.run_pull()
-    main.set_max_poll(emerg_max_poll)
+    gevent.sleep(1)
+    # start threads
+    u.app.run_push()
+    u.app.run_pull()
+    u.app.run_alt_pull()
     # sleep(10)
     # main.reset_poll()
     # main.start_poll(gen_pipeline(u.e_chan))
@@ -280,43 +276,45 @@ if __name__ == "__main__":
     is_debug = args.debug
     base_rtmp_url = "rtmp://{}:1935/live/".format(host)
     opts_dict = {
-        # "input_file_path": "0",
-        "input_file_path": os.path.join(pwd, "test.mp4"),
+        "input_file_path": "0",
+        # "input_file_path": os.path.join(pwd, "test.mp4"),
         # "input_file_path": "/home/crosstyan/Code/ncnn/py/test (115).mp4",
-        "output_file_path": "",
         "param_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.param"),
         "bin_path": os.path.join(pwd, "..", "model", "yolo-fastestv2-opt.bin"),
         "rtmp_url": base_rtmp_url + default_chan,
         "redis_url": "tcp://127.0.0.1:6379",
-        "scaled_coeffs": 0.8,
+        "cache_key": "image1",
+        "alt_cache_key": "image2",
+        "target_input_width": 640,
+        "target_input_height": 480,
+        "target_input_fps": -1,
+        "scaled_coeffs": 0.2,
         "threshold_NMS": 0.125,
-        "out_fps": 6,
-        "crop_coeffs": 0.1,
+        "out_fps": 15,
         "threads_num": 4,
+        "time_text_x": 10,
+        "time_text_y": 20,
+        "time_font_scale": 0.4,
         "is_border": False,
+        "is_draw_time": True,
+        "is_save_alt": True,
         "is_debug": is_debug,
     }
 
+    opts = yolo_app.Options.init(opts_dict)
     # https://loguru.readthedocs.io/en/stable/resources/recipes.html#changing-the-level-of-an-existing-handler
     # https://github.com/Delgan/loguru/issues/138
     loguru_level = "DEBUG" if is_debug else "INFO"
     logger.remove()
     logger.add(sys.stderr, level=loguru_level)
 
-    opts = yolo_app.init_options(opts_dict)
     main = yolo_app.MainWrapper(opts)
     logger.info("host: {}, port: {}".format(host, port))
-    main.init()
     u = UDPApp(host, port, main, 123)
-    main.set_on_detect_yolo(u.on_detect_yolo)
-    main.set_on_detect_door(u.on_detect_door)
-    main.set_on_poll_complete(u.on_poll_complete)
     # https://sdiehl.github.io/gevent-tutorial/
     g = gevent.spawn(u.serve_forever)
     send_init = gevent.spawn(u.send_init_req)
     run_g = gevent.spawn(run_main)
-    mpu = gevent.spawn(u.mpu6050_forever)
-    bmp = gevent.spawn(u.bmp_forever)
     g.start()
     # gevent.joinall([g, send_init, run_g])
-    gevent.joinall([g, send_init, run_g, mpu, bmp])
+    gevent.joinall([g, send_init, run_g])

@@ -2,33 +2,15 @@
 // Created by crosstyan on 2022/2/9.
 //
 
-#include "include/detect.h"
-#include "date.h"
-#include <cmath>
-#include<vector>
 
 #ifndef _STANDALONE_ON
 
-#include<pybind11/pybind11.h>
+#include "include/detect.h"
 
 namespace py = pybind11;
 #endif
 
 using namespace YoloApp;
-
-/// a global flag in order to make signal function work
-bool YoloApp::IS_CAPTURE_ENABLED = true;
-const std::vector<char const *> YoloApp::classNames = {
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-    "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-    "hair drier", "toothbrush"
-};
 
 /// not a pure function, will modify the drawImg
 /// @param classNames  the name of the class to be detected (array of strings)
@@ -75,13 +57,16 @@ YoloApp::detectFrame(cv::Mat &detectImg,
   return boxes;
 }
 
-auto drawTime(cv::Mat &drawImg) {
+auto drawTime(cv::Mat &drawImg, float font_scale = 0.5, int text_x = 10, int text_y = 20) {
   // add current time
+  // https://github.com/HowardHinnant/date/issues/543
   auto now = std::chrono::system_clock::now();
-  auto formatted = date::format("%Y-%m-%d %H:%M:%S", now);
-  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 2,
+  auto formatted = date::format("%Y/%m/%d %H:%M:%S", date::floor<std::chrono::seconds>(now));
+  cv::putText(drawImg, formatted, cv::Point(text_x, text_y), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0),
+              2,
               cv::LINE_AA);
-  cv::putText(drawImg, formatted, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1,
+  cv::putText(drawImg, formatted, cv::Point(text_x, text_y), cv::FONT_HERSHEY_SIMPLEX, font_scale,
+              cv::Scalar(255, 255, 255), 1,
               cv::LINE_AA);
 }
 
@@ -144,7 +129,7 @@ YoloApp::CapProps VideoHandler::getCapProps() {
 
 // I should move the ownership of cap and YoloFastestV2 API to VideoHandler
 VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis::Redis &redis,
-                           const std::vector<const char *> classNames, const YoloApp::Options opts)
+                           const std::vector<const char *> classNames, Options &opts)
     : cap{cap}, api{api}, classNames{classNames}, redis{redis}, opts{opts} {
 
   frame_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -173,8 +158,9 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis:
     spdlog::debug("Try to set video FPS to {}, result {}", opts.targetInputFPS, frame_fps);
   }
 
-  redis.del("image"); // TODO: why the key of redis is hardcoded
-
+  // drop all the cache before starting
+  redis.del(opts.cacheKey);
+  redis.del(opts.altCacheKey);
 
   if (opts.scaledCoeffs < 0 || opts.scaledCoeffs > 1) {
     spdlog::warn("scaledCoeffs should be between 0 and 1. Image will not be resized");
@@ -191,6 +177,30 @@ VideoHandler::VideoHandler(cv::VideoCapture &cap, YoloFastestV2 &api, sw::redis:
   const auto crop_left_pt = vertical_middle - (frame_width * CROP_COEF);
   const auto length = crop_right_pt - crop_left_pt;
   this->cropRect = cv::Rect(crop_left_pt, 0, length, length);
+}
+
+void VideoHandler::saveToRedis(cv::Mat image, std::string key) {
+  // uchar = unsigned char
+  std::vector<uchar> buf;
+  auto success = cv::imencode(".png", image, buf);
+
+  // spdlog::debug("Send Vector Length: {}", buf.size());
+  if (success) {
+    auto len = redis.llen(opts.cacheKey);
+    // 1500 is the max length of the queue
+    // TODO I shouldn't use magic number
+    if (len < 1500) {
+      // spdlog::debug("Redis List length: {}", len);
+      // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
+      redis.lpush(key, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+    } else {
+      redis.rpop(key);
+      redis.lpush(key, sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
+    }
+  } else {
+    spdlog::error("Failed to encode image");
+    throw std::runtime_error("Failed to encode image");
+  }
 }
 
 int VideoHandler::run() {
@@ -220,33 +230,14 @@ int VideoHandler::run() {
     if (this->isYolo) {
       detectFrame(origImg, cvImgResized, api, classNames, onDetectYolo);
     }
-    drawTime(cvImgResized);
-
-
-    if (this->isWriteRedis) {
-      // uchar = unsigned char
-      std::vector<uchar> buf;
-      auto success = cv::imencode(".png", cvImgResized, buf);
-
-      // spdlog::debug("Send Vector Length: {}", buf.size());
-      if (success) {
-        auto len = redis.llen("image");
-        // 1500 is the max length of the queue
-        // TODO I shouldn't use magic number
-        if (len < 1500) {
-          // spdlog::debug("Redis List length: {}", len);
-          // See https://stackoverflow.com/questions/62363934/how-can-i-store-binary-data-using-redis-plus-plus-like-i-want-to-store-a-structu
-          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
-        } else {
-          redis.rpop("image");
-          redis.lpush("image", sw::redis::StringView(reinterpret_cast<const char *>(buf.data()), buf.size()));
-        }
-      } else {
-        spdlog::error("Failed to encode image");
-        throw std::runtime_error("Failed to encode image");
-      }
+    if (opts.isDrawTime) {
+      drawTime(cvImgResized, opts.timeFontScale, opts.timeTextX, opts.timeTextY);
     }
 
+    if (opts.isSaveAlt) {
+      this->saveToRedis(origImg, opts.altCacheKey);
+    }
+    this->saveToRedis(cvImgResized, opts.cacheKey);
     auto end = ncnn::get_current_time();
 
     // Debug info
@@ -259,77 +250,11 @@ int VideoHandler::run() {
       if (frame_count > 0) {
         spdlog::debug("[{}/{}]\t{} ms", real_frame_count, frame_count, end - start);
       } else {
-        spdlog::debug("[{}]\t{} ms Yolo:{}", real_frame_count, end - start, this->isYolo);
+        spdlog::debug("[{}]\t{} ms\tYolo:{}", real_frame_count, end - start, this->isYolo);
       }
     }
   }
   return YoloApp::Error::SUCCESS;
-}
-
-void PullTask::run() {
-  while (YoloApp::IS_CAPTURE_ENABLED) {
-    if (this->isReadRedis) {
-      //  sw::redis::OptionalStringPair redisMemory = redis.brpop("image", 0);
-      /// It's wasteful to copy the data, but it's the only way to get the data
-      /// without causing problems.
-      /// Also See https://stackoverflow.com/questions/41462433/can-i-reinterpret-stdvectorchar-as-a-stdvectorunsigned-char-without-copy
-      if (this->writer != nullptr && !pipeline.empty()) {
-        if (!this->writer->isOpened()) {
-          auto[frame_width, frame_height, frame_fps] = capProps;
-          auto out_framerate = this->opts.outputFPS > 0 ? this->opts.outputFPS : frame_fps;
-          spdlog::debug("Opening Video Writer with {}x{} and {} fps", frame_width, frame_height, out_framerate);
-
-          this->writer->open(pipeline, cv::CAP_GSTREAMER, 0, out_framerate,
-                             cv::Size(frame_width, frame_height));
-        }
-      }
-      auto redisMemory = this->redis.brpop("image", 0) // TODO: why the key of redis is hardcoded
-          .value_or(std::make_pair("", ""))
-          .second;
-      if (redisMemory.empty()) {
-        continue;
-      }
-      auto vector = std::vector<uchar>(redisMemory.begin(), redisMemory.end());
-      auto start = ncnn::get_current_time();
-      auto image = cv::imdecode(vector, cv::IMREAD_COLOR);
-      if (image.empty()) {
-        spdlog::error("Failed to decode image");
-        throw std::runtime_error("Failed to decode image");
-      }
-      if (this->writer == nullptr || !this->writer->isOpened()) {
-        spdlog::error("writer is null. Writing will be skipped");
-      } else {
-        writer->write(image);
-      }
-      auto end = ncnn::get_current_time();
-      spdlog::debug("[Pull/{}]\t{} ms", this->poll, end - start);
-      poll++;
-      if (poll > this->maxPoll) {
-        isReadRedis = false;
-        this->onPollComplete(this->poll);
-        this->writer->release();
-        this->writer = nullptr;
-      }
-    }
-  }
-}
-
-
-void PullTask::clearQueue() {
-  this->redis.del("image"); // TODO: why the key of redis is hardcoded
-};
-
-PullTask::PullTask(CapProps capProps, Options opts, sw::redis::Redis &redis) : capProps(capProps), opts(opts),
-                                                                               redis(redis) {}
-
-void PullTask::setVideoWriter(std::string pipe) {
-  this->pipeline = std::move(pipe);
-  if (this->writer != nullptr && this->writer->isOpened()) {
-    this->writer->release();
-  }
-  this->writer = std::make_unique<cv::VideoWriter>();
-  // make an empty writer without opening it
-  // the opening operation will be finished in PullTask::run()
 }
 
 void VideoHandler::setOnDetectDoor(const std::function<void(const std::vector<pt_pair> &)> &onDetectDoor) {

@@ -14,7 +14,7 @@ namespace y = YoloApp;
 
 PYBIND11_MODULE(yolo_app, m) {
   m.doc() = R"pbdoc(
-          Pybind11 example plugin
+          YoloApp Python Binding
           -----------------------
 
           .. currentmodule:: yolo_app
@@ -22,29 +22,48 @@ PYBIND11_MODULE(yolo_app, m) {
           .. autosummary::
              :toctree: _generate
       )pbdoc";
-  py::class_<m::Options>(m, "Options");
-  m.def("init_options", &m::OptionsFromPyDict);
+  // The singleton of Options is implemented by shared_ptr
+  // If this declaration is not added,
+  // INSTANCE will magically be nullptr if called by python (ownership moved)
+  py::class_<y::Options, std::shared_ptr<y::Options>>(m, "Options")
+      .def_readwrite("scaled_coeffs", &y::Options::scaledCoeffs)
+      .def_readwrite("threshold_NMS", &y::Options::thresholdNMS)
+      .def_readwrite("is_border", &y::Options::isBorder)
+      .def_readwrite("is_draw_time", &y::Options::isDrawTime)
+      .def_readwrite("time_text_x", &y::Options::timeTextX)
+      .def_readwrite("time_text_y", &y::Options::timeTextY)
+      .def_static("init", &y::Options::fromPyDict);
+
   py::class_<m::MainWrapper>(m, "MainWrapper")
-      .def(py::init<const m::Options &>())
+      .def(py::init<y::Options &>())
       .def("init", &m::MainWrapper::init)
       .def("run_push", &m::MainWrapper::pushRunDetach)
       .def("run_pull", &m::MainWrapper::pullRunDetach)
-      .def("_set_pull_writer", &m::MainWrapper::setPullWriter)
-      .def("_set_pull_task_state", &m::MainWrapper::setPullTaskState)
-      .def("get_pull_task_state", &m::MainWrapper::getPullTaskState)
-      .def("set_on_detect_yolo", &m::MainWrapper::setOnDetectYolo)
-      .def("set_on_detect_door", &m::MainWrapper::setOnDetectDoor)
-      .def("set_on_poll_complete", &m::MainWrapper::setOnPollComplete)
-      .def("get_poll", &m::MainWrapper::getPoll)
-      .def("get_max_poll", &m::MainWrapper::getMaxPoll)
-      .def("set_max_poll", &m::MainWrapper::setMaxPoll)
-      .def("reset_poll", &m::MainWrapper::resetPoll)
-      .def("_enable_poll", &m::MainWrapper::enablePoll)
-      .def("start_poll", &m::MainWrapper::startPoll)
-      .def("clear_queue", &m::MainWrapper::clearQueue)
-      .def("__repr__", [](const m::MainWrapper &m) {
-        return "<MainWrapper>";
-      });
+      .def("run_alt_pull", &m::MainWrapper::altPullRunDetach)
+      .def("get_handler", &m::MainWrapper::getHandler)
+      .def("get_pull_job", &m::MainWrapper::getPullJob)
+      .def("get_alt_pull_job", &m::MainWrapper::getAltPullJob);
+
+  /**
+   default pybind11 using unique_ptr
+   so the ownership has been transferred to python side
+   MainWrapper can't access it anymore
+   See https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=shared_ptr#std-shared-ptr
+  **/
+  py::class_<y::PullTask, std::shared_ptr<y::PullTask>>(m, "PullTask")
+      .def("set_on_poll_complete", &y::PullTask::setOnPollComplete)
+      .def("clear_queue", &y::PullTask::clearQueue)
+      .def("start_poll", &y::PullTask::startPoll)
+      .def("reset_poll", &y::PullTask::resetPoll)
+      .def("is_running", &y::PullTask::isRunning)
+      .def_readwrite("max_poll", &y::PullTask::maxPoll)
+      .def_readonly("poll", &y::PullTask::poll);
+
+  py::class_<y::VideoHandler, std::shared_ptr<y::VideoHandler>>(m, "VideoHandler")
+      .def("set_on_detect_yolo", &y::VideoHandler::setOnDetectYolo)
+      .def("set_on_detect_door", &y::VideoHandler::setOnDetectDoor)
+      .def("set_crop_rect", &y::VideoHandler::setCropRect)
+      .def_readwrite("is_yolo", &y::VideoHandler::isYolo);
 
   py::class_<TargetBox>(m, "TargetBox")
       .def_readwrite("x1", &TargetBox::x1)

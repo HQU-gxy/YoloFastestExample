@@ -1,8 +1,5 @@
-# g++ -g -o demo demo.cpp src/yolo-fastestv2.cpp -I src/include -I /usr/include/ncnn /usr/lib/libncnn.a `pkg-config --libs --cflags opencv4` -fopenmp
-# https://blog.csdn.net/TwT520Ly/article/details/80457497
-
-cmake_minimum_required(VERSION 3.14)
-project(Yolo-FastestV2)
+cmake_minimum_required(VERSION 3.15...3.19)
+project(yolo_app)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -14,27 +11,21 @@ endif()
 
 ## Pybind11
 ## https://pybind11.readthedocs.io/en/latest/compiling.html#building-with-cmake
+# CMake does not detect the right Python version? See
+# https://pybind11.readthedocs.io/en/stable/faq.html?highlight=cmake#cmake-doesn-t-detect-the-right-python-version
+# use -DPYTHON_EXECUTABLE=$(which python) to find your preferred Python version
 set(PYBIND11_DIR lib/pybind11)
+set(PYBIND11_FINDPYTHON ON)
 add_subdirectory(${PYBIND11_DIR})
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
-# No idea why this broken
 # See https://cmake.org/cmake/help/latest/module/FindPython3.html#module:FindPython3
-#find_package(Python3 COMPONENTS Interpreter Development)
-#if (NOT PYTHON3_FOUND)
-#    message(FATAL_ERROR "Python3 is required to build this project")
-#endif()
-#message(STATUS "Python_VERSION = ${Python_VERSION}")
-#message(STATUS "Python3_INCLUDE_DIR = ${PYTHON3_INCLUDE_DIR}")
-#message(STATUS "Python3_LIBRARY = ${PYTHON3_LIBRARY}")
-
-# python-config --includes
-# -I/usr/include/python3.10 -I/usr/include/python3.10
-if (NOT DEFINED Python3_INCLUDE_DIRS)
-    set(Python3_INCLUDE_DIR /usr/include/python3.10)
-endif ()
-if (NOT DEFINED Python3_LIBRARY)
-    set(Python3_LIBRARY /usr/lib/libpython3.10.so)
-endif ()
+if (NOT PYTHON3_FOUND)
+    message(FATAL_ERROR "Python3 is required to build this project")
+endif()
+message(STATUS "Python3_VERSION=${Python3_VERSION}")
+message(STATUS "Python3_INCLUDE_DIRS=${Python3_INCLUDE_DIRS}")
+message(STATUS "Python3_LIBRARY=${Python3_LIBRARIES}")
 
 # target spdlog
 # you can just comment this line if you want to system library
@@ -103,48 +94,31 @@ set(YOLO_FASTEST_SRC lib/yolo/yolo-fastestv2.cpp)
 
 set(MAIN_INCLUDE_DIRS src/include)
 set(MAIN_SRC
-        src/main.cpp
         src/utils.cpp
         src/detect.cpp
+        src/Config.cpp
+        src/PullTask.cpp
         src/include/VideoInterface.h
         src/VideoInterface.cpp
         src/MainWrapper.cpp
         src/include/MainWrapper.h)
 
-# The named <target> must have been created by a command such as add_executable()
-# or add_library() and must not be an ALIAS target.
-add_executable(Yolo-FastestV2 ${MAIN_SRC} ${YOLO_FASTEST_SRC})
-
 # <------------ add hiredis dependency --------------->
 find_path(HIREDIS_HEADER hiredis)
-target_include_directories(Yolo-FastestV2 PUBLIC ${HIREDIS_HEADER})
 
 find_library(HIREDIS_LIB hiredis)
-target_link_libraries(Yolo-FastestV2 ${HIREDIS_LIB})
 
 # <------------ add redis-plus-plus dependency -------------->
 # NOTE: this should be *sw* NOT *redis++*
 find_path(REDIS_PLUS_PLUS_HEADER sw)
-target_include_directories(Yolo-FastestV2 PUBLIC ${REDIS_PLUS_PLUS_HEADER})
 
 find_library(REDIS_PLUS_PLUS_LIB redis++)
-target_link_libraries(Yolo-FastestV2 ${REDIS_PLUS_PLUS_LIB})
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${YOLO_FASTEST_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS} ${MAIN_INCLUDE_DIRS})
-
-target_link_libraries(Yolo-FastestV2 ${NCNN_LIBS})
-target_link_libraries(Yolo-FastestV2 spdlog::spdlog)
-target_link_libraries(Yolo-FastestV2 ${OpenCV_LIBS})
-target_link_libraries(Yolo-FastestV2 ${Python3_LIBRARY})
-
-# See src/MainWrapper.cpp for the usage of this variable
-# some part of code won't be used in python bindings
-target_compile_definitions(Yolo-FastestV2 PRIVATE -D_STANDALONE_ON=1)
 
 set(PY_BIND_SRC
         bind/bind.cpp)
 
-# Remember to select a new target in CLion
 pybind11_add_module(yolo_app
         ${PY_BIND_SRC}
         ${MAIN_SRC}

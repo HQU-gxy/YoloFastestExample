@@ -4,7 +4,7 @@ import sys
 import gevent
 from gevent import socket, Greenlet, sleep
 from toolz import mapcat as flatmap
-from e_helper import *
+from w_helper import *
 from typing import List, TypeVar
 # import logging
 from loguru import logger
@@ -69,11 +69,7 @@ base_pipeline = "appsrc ! " + \
 # https://www.gevent.org/examples/udp_client.html
 # https://www.gevent.org/examples/udp_server.html
 
-# stream
-# make sure server and client are share the same port
-
 T = TypeVar("T")
-
 
 def drop(coll: list[T], n: int = 1) -> list[T]:
     return coll[n:]
